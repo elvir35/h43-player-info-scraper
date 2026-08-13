@@ -1,0 +1,14 @@
+{
+  "minVersion": "1.8.9",
+  "brain": true,
+  "findFiles": {
+    "semanticRerank": true,
+    "overfetchMultiplier": 5,
+    "minOverfetch": 50,
+    "maxOverfetch": 200,
+    "lexicalWeight": 0.65,
+    "semanticWeight": 0.30,
+    "mustWeight": 0.10,
+    "genericPenaltyMax": 0.10
+  }
+}

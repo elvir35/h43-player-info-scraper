@@ -1,0 +1,6 @@
+
+# Context King index (machine-local, never commit)
+.ck-index/
+*.egg-info/
+__pycache__/
+.pytest_cache/

@@ -1,0 +1,19 @@
+[project]
+name = "h43-lund-player-scraper"
+version = "0.1.0"
+description = "Public SportAdmin player scraper for H43 Lund Herrar A."
+requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4>=4.12.3",
+    "requests>=2.32.3",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.2.0",
+]
+
+[tool.pytest.ini_options]
+addopts = "-p no:cacheprovider"
+testpaths = ["tests"]
+pythonpath = ["src"]
