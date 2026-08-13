@@ -1,8 +1,9 @@
 # H43 Lund Squad Scraper
 
-This repository scrapes the publicly visible player and coach/leader lists for H43 Lund Herrar A from SportAdmin:
+This repository scrapes the publicly visible player and coach/leader lists for H43 Lund senior squads from SportAdmin:
 
-https://h43lund.web.sportadmin.se/grupp/?ID=125511
+- Herrar A: https://h43lund.web.sportadmin.se/grupp/?ID=125511
+- Damer A: https://h43lund.web.sportadmin.se/grupp/?ID=147067
 
 It extracts only information shown on the public group page. It does not log in, call member-only APIs, or expose private/member-only data.
 
@@ -23,18 +24,28 @@ pytest
 Run the live scraper:
 
 ```bash
-python scripts/scrape_players.py --output data/players.json
+python scripts/scrape_players.py --all
+```
+
+Run one squad only:
+
+```bash
+python scripts/scrape_players.py --squad men
+python scripts/scrape_players.py --squad ladies
 ```
 
 Validate an existing generated file:
 
 ```bash
-python scripts/scrape_players.py --validate-only --output data/players.json
+python scripts/scrape_players.py --all --validate-only
 ```
 
 ## JSON Schema
 
-The scraper writes `data/players.json` as UTF-8 JSON without a generated timestamp, so scheduled runs only commit when player data actually changes.
+The scraper writes UTF-8 JSON without a generated timestamp, so scheduled runs only commit when squad data actually changes.
+
+- `data/players.json` contains Herrar A
+- `data/ladies_players.json` contains Damer A
 
 ```json
 {
@@ -79,7 +90,7 @@ The scraper fails when:
 - no coaches/leaders are found
 - any player or coach is missing a name
 - duplicates remain after deterministic normalization
-- the new player or coach count drops by more than 35% compared with an existing `data/players.json`
+- the new player or coach count drops by more than 35% compared with the matching existing generated JSON file
 
 Duplicate players are removed deterministically by keeping the first public page occurrence for each normalized `(name, position, age)` identity. Duplicate coaches are handled the same way using `(name, role, age)`.
 
@@ -110,24 +121,25 @@ The workflow:
 - checks out the repository
 - installs Python dependencies
 - runs fixture-based tests
-- runs the live scraper
-- validates `data/players.json`
-- commits and pushes only `data/players.json` when it changed
+- runs the live scraper for both senior squads
+- validates `data/players.json` and `data/ladies_players.json`
+- commits and pushes only the generated JSON files when either changed
 
 The workflow uses the built-in `GITHUB_TOKEN`. Repository-level permissions default to `contents: read`; the scrape job grants `contents: write` only because it may need to commit the generated JSON.
 
 ## Static HTTPS Access
 
-For browser `fetch()` from a Webnode HTML block, publish `data/players.json` through a static HTTPS URL.
+For browser `fetch()` from a Webnode HTML block, publish the generated JSON files through static HTTPS URLs.
 
 With GitHub Pages:
 
 1. Push this repository to GitHub.
-2. In repository settings, enable GitHub Pages from the branch that contains `data/players.json`.
+2. In repository settings, enable GitHub Pages from the branch that contains the `data/` folder.
 3. Fetch the JSON from a URL like:
 
 ```text
 https://OWNER.github.io/REPOSITORY/data/players.json
+https://OWNER.github.io/REPOSITORY/data/ladies_players.json
 ```
 
 Alternative static hosts such as Cloudflare Pages, Netlify, or Vercel work as long as they serve the file over HTTPS with browser-readable CORS headers.

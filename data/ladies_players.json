@@ -1,0 +1,178 @@
+{
+  "schema_version": 3,
+  "group": {
+    "club": "H43 Lund",
+    "team": "Damer A",
+    "sportadmin_group_id": "147067",
+    "source_url": "https://h43lund.web.sportadmin.se/grupp/?ID=147067"
+  },
+  "players": [
+    {
+      "name": "Alice Pyka",
+      "number": "-",
+      "position": null,
+      "age": 20,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5748016?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Alva Jönsson",
+      "number": "-",
+      "position": null,
+      "age": 23,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5662047?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Bella Videll",
+      "number": "-",
+      "position": null,
+      "age": 22,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5694312?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Elin Karlsson",
+      "number": "-",
+      "position": null,
+      "age": 22,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/2191544?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Ellinor Leijon",
+      "number": "-",
+      "position": null,
+      "age": 23,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/2826252?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Florencia Pérez Skogsborg",
+      "number": "-",
+      "position": null,
+      "age": 26,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/3279105?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Freya Hall",
+      "number": "-",
+      "position": null,
+      "age": 20,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5712903?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Frida Persson",
+      "number": "-",
+      "position": null,
+      "age": 18,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/1323460?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Hanna Ohlsson",
+      "number": "-",
+      "position": null,
+      "age": 19,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/581168?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Liv Lagerström",
+      "number": "-",
+      "position": null,
+      "age": 21,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5748014?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Maja Hivert",
+      "number": "-",
+      "position": null,
+      "age": 18,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5699300?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Matilda Andersson",
+      "number": "-",
+      "position": null,
+      "age": 19,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/659147?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Nelly Hammarberg",
+      "number": "-",
+      "position": null,
+      "age": 22,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5095717?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Selma Heinonen - Persson",
+      "number": "-",
+      "position": null,
+      "age": 19,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5712904?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Sofie Bogren",
+      "number": "-",
+      "position": null,
+      "age": 22,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/4459590?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Tuva-Lisa Brogren",
+      "number": "-",
+      "position": null,
+      "age": 18,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/659144?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Vera Dahlborg",
+      "number": "-",
+      "position": null,
+      "age": 22,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/543340?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Vilma Håkansson",
+      "number": "-",
+      "position": null,
+      "age": 22,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/3452880?a=491&g=GuvS1U02",
+      "profile_url": null
+    }
+  ],
+  "coaches": [
+    {
+      "name": "Patric Sandblom",
+      "role": null,
+      "age": 61,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5015041?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Timo Suthhof",
+      "role": null,
+      "age": 21,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5199140?a=491&g=GuvS1U02",
+      "profile_url": null
+    },
+    {
+      "name": "Tobias Jarl",
+      "role": null,
+      "age": 50,
+      "image_url": "https://publicpages.sportadmin.se/api/file/squad/9801/5748008?a=491&g=GuvS1U02",
+      "profile_url": null
+    }
+  ]
+}

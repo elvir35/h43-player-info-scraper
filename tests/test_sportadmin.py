@@ -3,7 +3,9 @@ from pathlib import Path
 import pytest
 
 from h43_scraper.sportadmin import (
+    LADIES_SQUAD,
     ScraperError,
+    SquadConfig,
     build_document,
     parse_coaches,
     parse_players,
@@ -49,6 +51,32 @@ def test_build_document_contains_players_and_coaches():
         "Alvin Persson",
     ]
     assert [coach["name"] for coach in document["coaches"]] == ["Coach Example"]
+
+
+def test_build_document_supports_ladies_squad_metadata():
+    players, coaches = parse_squad(FIXTURE.read_text(encoding="utf-8"))
+    document = build_document(players, coaches, LADIES_SQUAD)
+
+    assert document["group"] == {
+        "club": "H43 Lund",
+        "team": "Damer A",
+        "sportadmin_group_id": "147067",
+        "source_url": "https://h43lund.web.sportadmin.se/grupp/?ID=147067",
+    }
+    validate_document(document, squad=LADIES_SQUAD)
+
+
+def test_page_detection_uses_selected_squad():
+    wrong_squad = SquadConfig(
+        key="wrong",
+        team_name="Damer A",
+        group_id="147067",
+        source_url="https://h43lund.web.sportadmin.se/grupp/?ID=147067",
+        output_path=Path("data/ladies_players.json"),
+    )
+
+    with pytest.raises(ScraperError, match="Damer A"):
+        parse_squad(FIXTURE.read_text(encoding="utf-8"), squad=wrong_squad)
 
 
 def test_validation_rejects_large_count_drop():

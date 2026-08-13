@@ -11,10 +11,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup, Tag
 
-SOURCE_URL = "https://h43lund.web.sportadmin.se/grupp/?ID=125511"
-GROUP_ID = "125511"
 CLUB_NAME = "H43 Lund"
-TEAM_NAME = "Herrar A"
 SPORTADMIN_SUFFIX_PLAYERS = "_1"
 SPORTADMIN_SUFFIX_COACHES = "_2"
 MIN_PLAYERS = 1
@@ -25,6 +22,33 @@ USER_AGENT = (
     "(public SportAdmin page scraper; contact via repository issues)"
 )
 DETAIL_LABELS = {"Nummer", "Position", "Roll", "Ålder", "Moderklubb", "Smeknamn"}
+
+
+@dataclass(frozen=True)
+class SquadConfig:
+    key: str
+    team_name: str
+    group_id: str
+    source_url: str
+    output_path: Path
+
+
+MEN_SQUAD = SquadConfig(
+    key="men",
+    team_name="Herrar A",
+    group_id="125511",
+    source_url="https://h43lund.web.sportadmin.se/grupp/?ID=125511",
+    output_path=Path("data/players.json"),
+)
+LADIES_SQUAD = SquadConfig(
+    key="ladies",
+    team_name="Damer A",
+    group_id="147067",
+    source_url="https://h43lund.web.sportadmin.se/grupp/?ID=147067",
+    output_path=Path("data/ladies_players.json"),
+)
+SQUADS = {squad.key: squad for squad in (MEN_SQUAD, LADIES_SQUAD)}
+SOURCE_URL = MEN_SQUAD.source_url
 
 
 class ScraperError(RuntimeError):
@@ -81,9 +105,13 @@ def fetch_html(url: str = SOURCE_URL, timeout: int = 30) -> str:
     return response.text
 
 
-def parse_players(html: str, source_url: str = SOURCE_URL) -> list[Player]:
+def parse_players(
+    html: str,
+    source_url: str = SOURCE_URL,
+    squad: SquadConfig = MEN_SQUAD,
+) -> list[Player]:
     soup = BeautifulSoup(html, "html.parser")
-    assert_expected_page(soup)
+    assert_expected_page(soup, squad)
 
     players: list[Player] = []
     for row in soup.select("div.userRow[onclick]"):
@@ -123,9 +151,13 @@ def parse_players(html: str, source_url: str = SOURCE_URL) -> list[Player]:
     return players
 
 
-def parse_coaches(html: str, source_url: str = SOURCE_URL) -> list[Coach]:
+def parse_coaches(
+    html: str,
+    source_url: str = SOURCE_URL,
+    squad: SquadConfig = MEN_SQUAD,
+) -> list[Coach]:
     soup = BeautifulSoup(html, "html.parser")
-    assert_expected_page(soup)
+    assert_expected_page(soup, squad)
 
     coaches: list[Coach] = []
     for row in soup.select("div.userRow[onclick]"):
@@ -163,9 +195,13 @@ def parse_coaches(html: str, source_url: str = SOURCE_URL) -> list[Coach]:
     return coaches
 
 
-def parse_squad(html: str, source_url: str = SOURCE_URL) -> tuple[list[Player], list[Coach]]:
+def parse_squad(
+    html: str,
+    source_url: str = SOURCE_URL,
+    squad: SquadConfig = MEN_SQUAD,
+) -> tuple[list[Player], list[Coach]]:
     soup = BeautifulSoup(html, "html.parser")
-    assert_expected_page(soup)
+    assert_expected_page(soup, squad)
     return _parse_players_from_soup(soup, source_url), _parse_coaches_from_soup(soup, source_url)
 
 
@@ -245,29 +281,39 @@ def _parse_coaches_from_soup(soup: BeautifulSoup, source_url: str) -> list[Coach
     return coaches
 
 
-def build_document(players: list[Player], coaches: list[Coach] | None = None) -> dict[str, Any]:
+def build_document(
+    players: list[Player],
+    coaches: list[Coach] | None = None,
+    squad: SquadConfig = MEN_SQUAD,
+) -> dict[str, Any]:
     return {
         "schema_version": 3,
         "group": {
             "club": CLUB_NAME,
-            "team": TEAM_NAME,
-            "sportadmin_group_id": GROUP_ID,
-            "source_url": SOURCE_URL,
+            "team": squad.team_name,
+            "sportadmin_group_id": squad.group_id,
+            "source_url": squad.source_url,
         },
         "players": [player.as_json() for player in players],
         "coaches": [coach.as_json() for coach in coaches or []],
     }
 
 
-def validate_document(document: dict[str, Any], previous: dict[str, Any] | None = None) -> None:
+def validate_document(
+    document: dict[str, Any],
+    previous: dict[str, Any] | None = None,
+    squad: SquadConfig = MEN_SQUAD,
+) -> None:
     if document.get("schema_version") != 3:
         raise ScraperError("players.json schema_version must be 3")
 
     group = document.get("group")
     if not isinstance(group, dict):
         raise ScraperError("players.json must contain group metadata")
-    if group.get("source_url") != SOURCE_URL or group.get("sportadmin_group_id") != GROUP_ID:
+    if group.get("source_url") != squad.source_url or group.get("sportadmin_group_id") != squad.group_id:
         raise ScraperError("players.json does not describe the expected H43 Lund SportAdmin group")
+    if group.get("team") != squad.team_name:
+        raise ScraperError(f"players.json does not describe the expected {squad.team_name} squad")
 
     players = document.get("players")
     if not isinstance(players, list) or not players:
@@ -314,12 +360,17 @@ def _validate_count_drop(previous: dict[str, Any], key: str, current: list[Any],
             )
 
 
-def scrape_to_file(output_path: Path, source_url: str = SOURCE_URL) -> dict[str, Any]:
+def scrape_to_file(
+    output_path: Path,
+    source_url: str | None = None,
+    squad: SquadConfig = MEN_SQUAD,
+) -> dict[str, Any]:
+    source_url = source_url or squad.source_url
     html = fetch_html(source_url)
-    players, coaches = parse_squad(html, source_url)
-    document = build_document(players, coaches)
+    players, coaches = parse_squad(html, source_url, squad)
+    document = build_document(players, coaches, squad)
     previous = _read_json_if_exists(output_path)
-    validate_document(document, previous)
+    validate_document(document, previous, squad)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         json.dumps(document, ensure_ascii=False, indent=2, sort_keys=False) + "\n",
@@ -328,15 +379,15 @@ def scrape_to_file(output_path: Path, source_url: str = SOURCE_URL) -> dict[str,
     return document
 
 
-def assert_expected_page(soup: BeautifulSoup) -> None:
+def assert_expected_page(soup: BeautifulSoup, squad: SquadConfig = MEN_SQUAD) -> None:
     title = _clean_text(soup.title.get_text(" ", strip=True) if soup.title else "")
     page_text = _clean_text(soup.get_text(" ", strip=True))
     if "SportAdmin" not in page_text and not soup.select_one("div.userRow[onclick]"):
         raise ScraperError("The response does not look like a SportAdmin public page")
     if CLUB_NAME not in page_text or "Truppen" not in page_text or "Spelare" not in page_text:
         raise ScraperError("The expected H43 Lund squad page markers were not found")
-    if TEAM_NAME.upper() not in title.upper() and TEAM_NAME not in page_text:
-        raise ScraperError("The expected H43 Lund Herrar A group was not detected")
+    if squad.team_name.upper() not in title.upper() and squad.team_name not in page_text:
+        raise ScraperError(f"The expected H43 Lund {squad.team_name} group was not detected")
 
 
 def _visible_row_fields(row: Tag, source_url: str) -> dict[str, str | None]:
@@ -459,28 +510,45 @@ def _read_json_if_exists(path: Path) -> dict[str, Any] | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Scrape public H43 Lund players from SportAdmin.")
-    parser.add_argument("--output", type=Path, default=Path("data/players.json"))
-    parser.add_argument("--source-url", default=SOURCE_URL)
+    parser = argparse.ArgumentParser(description="Scrape public H43 Lund squads from SportAdmin.")
+    parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--source-url", default=None)
+    parser.add_argument("--squad", choices=sorted(SQUADS), default="men")
+    parser.add_argument("--all", action="store_true", help="Scrape or validate all configured squads.")
     parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
 
+    selected_squads = list(SQUADS.values()) if args.all else [SQUADS[args.squad]]
+    if args.output is not None and len(selected_squads) > 1:
+        raise ScraperError("--output can only be used with a single --squad")
+    if args.source_url is not None and len(selected_squads) > 1:
+        raise ScraperError("--source-url can only be used with a single --squad")
+
+    results: list[tuple[Path, dict[str, Any]]] = []
     if args.validate_only:
-        document = _read_json_if_exists(args.output)
-        if document is None:
-            raise ScraperError(f"{args.output} does not exist")
-        validate_document(document)
-        print(
-            f"Validated {len(document['players'])} players and "
-            f"{len(document['coaches'])} coaches in {args.output}"
-        )
+        for squad in selected_squads:
+            output_path = args.output or squad.output_path
+            document = _read_json_if_exists(output_path)
+            if document is None:
+                raise ScraperError(f"{output_path} does not exist")
+            validate_document(document, squad=squad)
+            results.append((output_path, document))
+        for output_path, document in results:
+            print(
+                f"Validated {len(document['players'])} players and "
+                f"{len(document['coaches'])} coaches in {output_path}"
+            )
         return 0
 
-    document = scrape_to_file(args.output, args.source_url)
-    print(
-        f"Wrote {len(document['players'])} players and "
-        f"{len(document['coaches'])} coaches to {args.output}"
-    )
+    for squad in selected_squads:
+        output_path = args.output or squad.output_path
+        document = scrape_to_file(output_path, args.source_url, squad)
+        results.append((output_path, document))
+    for output_path, document in results:
+        print(
+            f"Wrote {len(document['players'])} players and "
+            f"{len(document['coaches'])} coaches to {output_path}"
+        )
     return 0
 
 
