@@ -19,6 +19,7 @@ def test_parse_public_players_from_fixture():
     players = parse_players(FIXTURE.read_text(encoding="utf-8"))
 
     assert [player.name for player in players] == ["Olof Lundahl Olsson", "Alvin Persson"]
+    assert players[0].number == "31"
     assert players[0].position == "H6"
     assert players[0].age == 25
     assert players[0].profile_url is None
@@ -41,7 +42,8 @@ def test_build_document_contains_players_and_coaches():
     players, coaches = parse_squad(FIXTURE.read_text(encoding="utf-8"))
     document = build_document(players, coaches)
 
-    assert document["schema_version"] == 2
+    assert document["schema_version"] == 3
+    assert document["players"][0]["number"] == "31"
     assert [player["name"] for player in document["players"]] == [
         "Olof Lundahl Olsson",
         "Alvin Persson",

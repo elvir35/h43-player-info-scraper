@@ -38,7 +38,7 @@ The scraper writes `data/players.json` as UTF-8 JSON without a generated timesta
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "group": {
     "club": "H43 Lund",
     "team": "Herrar A",
@@ -48,6 +48,7 @@ The scraper writes `data/players.json` as UTF-8 JSON without a generated timesta
   "players": [
     {
       "name": "Olof Lundahl Olsson",
+      "number": "31",
       "position": "H6",
       "age": 25,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5193930?a=491&g=...",
@@ -66,7 +67,7 @@ The scraper writes `data/players.json` as UTF-8 JSON without a generated timesta
 }
 ```
 
-Player `position`, coach `role`, `age`, `image_url`, and `profile_url` may be `null` when SportAdmin does not publicly present the value. SportAdmin currently exposes detail toggles and image lightboxes, but not separate public profile pages for this group, so `profile_url` is normally `null`.
+Player `number` is `"-"` when SportAdmin does not publicly present a jersey number. Player `position`, coach `role`, `age`, `image_url`, and `profile_url` may be `null` when SportAdmin does not publicly present the value. SportAdmin currently exposes detail toggles and image lightboxes, but not separate public profile pages for this group, so `profile_url` is normally `null`.
 
 ## Validation
 

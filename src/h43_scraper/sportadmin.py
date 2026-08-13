@@ -34,6 +34,7 @@ class ScraperError(RuntimeError):
 @dataclass(frozen=True)
 class Player:
     name: str
+    number: str
     position: str | None
     age: int | None
     image_url: str | None
@@ -42,6 +43,7 @@ class Player:
     def as_json(self) -> dict[str, Any]:
         return {
             "name": self.name,
+            "number": self.number,
             "position": self.position,
             "age": self.age,
             "image_url": self.image_url,
@@ -95,7 +97,8 @@ def parse_players(html: str, source_url: str = SOURCE_URL) -> list[Player]:
 
         visible = _visible_row_fields(row, source_url)
         details = _detail_fields(detail)
-        name = _normalize_name(visible.get("name", ""), details.get("Nummer"))
+        number = _normalize_number(details.get("Nummer") or "")
+        name = _normalize_name(visible.get("name", ""), number)
         position = _clean_text(details.get("Position") or visible.get("position") or "")
         age = _parse_age(details.get("Ålder") or visible.get("age") or "")
         image_url = _best_image_url(detail, row, source_url)
@@ -106,6 +109,7 @@ def parse_players(html: str, source_url: str = SOURCE_URL) -> list[Player]:
         players.append(
             Player(
                 name=name,
+                number=number or "-",
                 position=position or None,
                 age=age,
                 image_url=image_url,
@@ -178,7 +182,8 @@ def _parse_players_from_soup(soup: BeautifulSoup, source_url: str) -> list[Playe
 
         visible = _visible_row_fields(row, source_url)
         details = _detail_fields(detail)
-        name = _normalize_name(visible.get("name", ""), details.get("Nummer"))
+        number = _normalize_number(details.get("Nummer") or "")
+        name = _normalize_name(visible.get("name", ""), number)
         position = _clean_text(details.get("Position") or visible.get("position") or "")
         age = _parse_age(details.get("Ålder") or visible.get("age") or "")
         image_url = _best_image_url(detail, row, source_url)
@@ -189,6 +194,7 @@ def _parse_players_from_soup(soup: BeautifulSoup, source_url: str) -> list[Playe
         players.append(
             Player(
                 name=name,
+                number=number or "-",
                 position=position or None,
                 age=age,
                 image_url=image_url,
@@ -241,7 +247,7 @@ def _parse_coaches_from_soup(soup: BeautifulSoup, source_url: str) -> list[Coach
 
 def build_document(players: list[Player], coaches: list[Coach] | None = None) -> dict[str, Any]:
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "group": {
             "club": CLUB_NAME,
             "team": TEAM_NAME,
@@ -254,8 +260,8 @@ def build_document(players: list[Player], coaches: list[Coach] | None = None) ->
 
 
 def validate_document(document: dict[str, Any], previous: dict[str, Any] | None = None) -> None:
-    if document.get("schema_version") != 2:
-        raise ScraperError("players.json schema_version must be 2")
+    if document.get("schema_version") != 3:
+        raise ScraperError("players.json schema_version must be 3")
 
     group = document.get("group")
     if not isinstance(group, dict):
@@ -288,6 +294,7 @@ def _validate_people(people: list[Any], label: str, role_key: str) -> None:
             raise ScraperError(f"{label} #{index + 1} is missing a name")
         key = (
             _identity_text(str(person.get("name") or "")),
+            person.get("number"),
             person.get(role_key),
             person.get("age"),
         )
@@ -397,10 +404,15 @@ def _profile_url(row: Tag, source_url: str) -> str | None:
 def _normalize_name(raw_name: str, number: str | None = None) -> str:
     name = _clean_text(raw_name)
     if number:
-        number_pattern = re.escape(_clean_text(number))
-        name = re.sub(rf"^{number_pattern}\s*", "", name)
+        number_pattern = re.escape(_normalize_number(number))
+        name = re.sub(rf"^#?{number_pattern}\s*", "", name)
     name = re.sub(r"^#\d+\s+", "", name)
     return _clean_text(name)
+
+
+def _normalize_number(raw_number: str) -> str:
+    match = re.search(r"#?\s*(\d+)", raw_number or "")
+    return match.group(1) if match else ""
 
 
 def _parse_age(raw_age: str) -> int | None:
@@ -417,10 +429,10 @@ def _identity_text(value: str) -> str:
 
 
 def _dedupe_players(players: list[Player]) -> list[Player]:
-    seen: set[tuple[str, str | None, int | None]] = set()
+    seen: set[tuple[str, str | None, str | None, int | None]] = set()
     unique: list[Player] = []
     for player in players:
-        key = (_identity_text(player.name), player.position, player.age)
+        key = (_identity_text(player.name), player.number, player.position, player.age)
         if key in seen:
             continue
         seen.add(key)

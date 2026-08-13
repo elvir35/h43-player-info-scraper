@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "group": {
     "club": "H43 Lund",
     "team": "Herrar A",
@@ -9,6 +9,7 @@
   "players": [
     {
       "name": "Jonathan Johansson",
+      "number": "2",
       "position": null,
       "age": 22,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5281594?a=491&g=8hnEVebC",
@@ -16,6 +17,7 @@
     },
     {
       "name": "Adam Wennerholm",
+      "number": "37",
       "position": null,
       "age": 26,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5263553?a=491&g=8hnEVebC",
@@ -23,6 +25,7 @@
     },
     {
       "name": "Olof Lundahl Olsson",
+      "number": "31",
       "position": "H6",
       "age": 25,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/3277675?a=491&g=8hnEVebC",
@@ -30,6 +33,7 @@
     },
     {
       "name": "Oliver Strid",
+      "number": "26",
       "position": "H9",
       "age": 22,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/4635140?a=491&g=8hnEVebC",
@@ -37,6 +41,7 @@
     },
     {
       "name": "Olle Liljenberg",
+      "number": "5",
       "position": "M6",
       "age": 20,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/492689?a=491&g=8hnEVebC",
@@ -44,6 +49,7 @@
     },
     {
       "name": "Albin Hallengren",
+      "number": "22",
       "position": "M6",
       "age": 22,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/4262021?a=491&g=8hnEVebC",
@@ -51,6 +57,7 @@
     },
     {
       "name": "Gustav Mölhede",
+      "number": "20",
       "position": "M9",
       "age": 29,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/4077436?a=491&g=8hnEVebC",
@@ -58,6 +65,7 @@
     },
     {
       "name": "Melker Jarl",
+      "number": "23",
       "position": "M9",
       "age": 24,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5186091?a=491&g=8hnEVebC",
@@ -65,6 +73,7 @@
     },
     {
       "name": "Alfred Åsvärd",
+      "number": "16",
       "position": "MV",
       "age": 28,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/4143645?a=491&g=8hnEVebC",
@@ -72,6 +81,7 @@
     },
     {
       "name": "Gustav Nielsen",
+      "number": "72",
       "position": "MV",
       "age": 20,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/843151?a=491&g=8hnEVebC",
@@ -79,6 +89,7 @@
     },
     {
       "name": "Hugo Svensson",
+      "number": "14",
       "position": "V6",
       "age": 23,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/2428875?a=491&g=8hnEVebC",
@@ -86,6 +97,7 @@
     },
     {
       "name": "Anton Celander",
+      "number": "17",
       "position": "V6",
       "age": 24,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/491720?a=491&g=8hnEVebC",
@@ -93,6 +105,7 @@
     },
     {
       "name": "Felix Tyberg",
+      "number": "30",
       "position": "V6",
       "age": 28,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5193945?a=491&g=8hnEVebC",
@@ -100,6 +113,7 @@
     },
     {
       "name": "Gustaf Sjöblad",
+      "number": "7",
       "position": "V9",
       "age": 21,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/2089193?a=491&g=8hnEVebC",
@@ -107,6 +121,7 @@
     },
     {
       "name": "Johan Ekholm",
+      "number": "27",
       "position": "V9",
       "age": 22,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/4633689?a=491&g=8hnEVebC",
@@ -114,6 +129,7 @@
     },
     {
       "name": "Alvin Persson",
+      "number": "-",
       "position": null,
       "age": 18,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5269228?a=491&g=8hnEVebC",
@@ -121,6 +137,7 @@
     },
     {
       "name": "Arvid Wendt",
+      "number": "-",
       "position": null,
       "age": 18,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/630800?a=491&g=8hnEVebC",
@@ -128,6 +145,7 @@
     },
     {
       "name": "Elton Janhall",
+      "number": "-",
       "position": null,
       "age": 18,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5709799?a=491&g=8hnEVebC",
@@ -135,6 +153,7 @@
     },
     {
       "name": "Emil Arthursson",
+      "number": "-",
       "position": null,
       "age": 26,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5670214?a=491&g=8hnEVebC",
@@ -142,6 +161,7 @@
     },
     {
       "name": "Isak Sassersson",
+      "number": "-",
       "position": null,
       "age": 18,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5666985?a=491&g=8hnEVebC",
@@ -149,6 +169,7 @@
     },
     {
       "name": "Olle Lundin",
+      "number": "-",
       "position": null,
       "age": 21,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/492690?a=491&g=8hnEVebC",
@@ -156,6 +177,7 @@
     },
     {
       "name": "Otto Fischier",
+      "number": "-",
       "position": null,
       "age": 20,
       "image_url": "https://publicpages.sportadmin.se/api/file/squad/9799/5709800?a=491&g=8hnEVebC",
