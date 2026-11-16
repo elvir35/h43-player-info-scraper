@@ -1,0 +1,90 @@
+name: Synchronize youth roster
+
+on:
+  # GitHub cron cannot interpolate repository variables. An hourly tick gates
+  # actual scraping by the configured interval (default 6 hours).
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: youth-roster-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    # Opt-in per reviewed GitHub environment; production requires separate approval.
+    if: vars.YOUTH_ROSTER_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ vars.YOUTH_ROSTER_ENVIRONMENT || 'staging' }}
+    steps:
+      - name: Check configured interval
+        id: cadence
+        env:
+          INTERVAL: ${{ vars.YOUTH_ROSTER_INTERVAL_HOURS || '6' }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import datetime, timezone
+          interval = int(os.environ['INTERVAL'])
+          if interval not in (1, 2, 3, 4, 6, 8, 12, 24):
+              raise SystemExit('Interval must be 1, 2, 3, 4, 6, 8, 12 or 24 hours')
+          due = os.environ['EVENT'] == 'workflow_dispatch' or datetime.now(timezone.utc).hour % interval == 0
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'due={str(due).lower()}\n')
+          PY
+      - uses: actions/checkout@v4
+        if: steps.cadence.outputs.due == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        if: steps.cadence.outputs.due == 'true'
+        with:
+          python-version: "3.11"
+      - name: Verify environment before exposing ingestion credentials
+        if: steps.cadence.outputs.due == 'true' && vars.YOUTH_ROSTER_SYNC_ENABLED == 'true'
+        env:
+          SYNC_ENVIRONMENT: ${{ vars.YOUTH_ROSTER_ENVIRONMENT || 'staging' }}
+          H43_API_URL: ${{ vars.H43_API_URL }}
+          H43_WORKERS_SUBDOMAIN: ${{ vars.H43_WORKERS_SUBDOMAIN }}
+          YOUTH_ROSTER_PRODUCTION_APPROVED: ${{ vars.YOUTH_ROSTER_PRODUCTION_APPROVED }}
+        run: python scripts/validate_youth_sync_environment.py
+      - name: Install and test
+        if: steps.cadence.outputs.due == 'true'
+        run: |
+          python -m pip install -e ".[test]"
+          python -m pytest
+      - name: Validate without ingestion (counts only)
+        if: steps.cadence.outputs.due == 'true' && vars.YOUTH_ROSTER_SYNC_ENABLED != 'true' && vars.YOUTH_ROSTER_ALL_TEAMS != 'true'
+        env:
+          TEAM_ID: ${{ vars.YOUTH_ROSTER_TEAM_ID || 'p11' }}
+          TEAM_NAME: ${{ vars.YOUTH_ROSTER_TEAM_NAME || 'P11' }}
+          GROUP_ID: ${{ vars.YOUTH_ROSTER_GROUP_ID || '378673' }}
+        run: python scripts/scrape_youth_roster.py --team-id "$TEAM_ID" --team-name "$TEAM_NAME" --group-id "$GROUP_ID"
+      - name: Synchronize through authenticated ingestion
+        if: steps.cadence.outputs.due == 'true' && vars.YOUTH_ROSTER_SYNC_ENABLED == 'true' && vars.YOUTH_ROSTER_ALL_TEAMS != 'true'
+        env:
+          TEAM_ID: ${{ vars.YOUTH_ROSTER_TEAM_ID || 'p11' }}
+          TEAM_NAME: ${{ vars.YOUTH_ROSTER_TEAM_NAME || 'P11' }}
+          GROUP_ID: ${{ vars.YOUTH_ROSTER_GROUP_ID || '378673' }}
+          H43_API_URL: ${{ vars.H43_API_URL }}
+          H43_INGEST_TOKEN: ${{ secrets.H43_INGEST_TOKEN }}
+        run: python scripts/sync_youth_roster.py --team-id "$TEAM_ID" --team-name "$TEAM_NAME" --group-id "$GROUP_ID"
+        # Dedicated environment/team credential only; no Cloudflare deployment
+        # token, JSON commits, payload artifacts or roster-name logs.
+
+      - name: Validate all reviewed teams (counts only)
+        if: steps.cadence.outputs.due == 'true' && vars.YOUTH_ROSTER_ALL_TEAMS == 'true' && vars.YOUTH_ROSTER_SYNC_ENABLED != 'true'
+        run: python scripts/sync_youth_teams.py --validate-only
+      - name: Synchronize all reviewed teams
+        if: steps.cadence.outputs.due == 'true' && vars.YOUTH_ROSTER_ALL_TEAMS == 'true' && vars.YOUTH_ROSTER_SYNC_ENABLED == 'true'
+        env:
+          H43_API_URL: ${{ vars.H43_API_URL }}
+          H43_INGEST_TOKENS_JSON: ${{ secrets.H43_INGEST_TOKENS_JSON }}
+        run: python scripts/sync_youth_teams.py
+        # The secret is a team-id -> dedicated raw ingestion token map, never a deployment credential.

@@ -1,0 +1,79 @@
+[
+  {
+    "id": "f15",
+    "name": "H43 Lund F15",
+    "sportadminTeamName": "F15",
+    "groupId": "369109",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=331232"
+  },
+  {
+    "id": "p15",
+    "name": "H43 Lund P15",
+    "sportadminTeamName": "P15",
+    "groupId": "531183",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=224843"
+  },
+  {
+    "id": "f14",
+    "name": "H43 Lund F14",
+    "sportadminTeamName": "F14",
+    "groupId": "331240",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=331240"
+  },
+  {
+    "id": "f12",
+    "name": "H43 Lund F12",
+    "sportadminTeamName": "F12",
+    "groupId": "378664",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=378664"
+  },
+  {
+    "id": "p12",
+    "name": "H43 Lund P12",
+    "sportadminTeamName": "P12",
+    "groupId": "386966",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=378656"
+  },
+  {
+    "id": "f11",
+    "name": "H43 Lund F11",
+    "sportadminTeamName": "F11",
+    "groupId": "378680",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=378680"
+  },
+  {
+    "id": "p11",
+    "name": "H43 Lund P11",
+    "sportadminTeamName": "P11",
+    "groupId": "378673",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=378672"
+  },
+  {
+    "id": "f10",
+    "name": "H43 Lund F10",
+    "sportadminTeamName": "F10",
+    "groupId": "510420",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=510417"
+  },
+  {
+    "id": "p10",
+    "name": "H43 Lund P10",
+    "sportadminTeamName": "P10",
+    "groupId": "510428",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/grupp/?ID=510428"
+  },
+  {
+    "id": "f9",
+    "name": "H43 Lund F9",
+    "sportadminTeamName": "F9",
+    "groupId": "565795",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=565792"
+  },
+  {
+    "id": "p9",
+    "name": "H43 Lund P9",
+    "sportadminTeamName": "P9",
+    "groupId": "565803",
+    "sourcePageUrl": "https://h43lund.web.sportadmin.se/start/?ID=565800"
+  }
+]
