@@ -1,5 +1,7 @@
 # Production deployment for validation — 2026-11-16
 
+**Subsequent cutover:** production editing and authenticated GitHub synchronization are now active; staging editing/ingestion are disabled. The user chose to publish Webnode manually. See [the current cutover record and exact publication instructions](production-cutover.md). The deployment-validation facts below describe the earlier preparation state.
+
 The user approved dedicated production resources, migration and deployment for validation, and separately confirmed creation of the production Access application at its final save step. Webnode and the active staging coach portal remain unchanged. This is a validation deployment; the production coach editor is deliberately disabled until the coordinated cutover so two independent databases cannot accept coach edits.
 
 ## Deployed resources

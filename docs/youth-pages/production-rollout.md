@@ -1,6 +1,6 @@
 # Production rollout review — 2026-11-16
 
-Status updated 2026-11-16: the user approved isolated production provisioning, migration and deployment for validation. The dedicated production resources are deployed; the public API is enabled for validation and the production editor remains disabled until cutover. Webnode cutover is not approved or executed. See [production validation results](production-validation.md). SportAdmin team lifecycle automation stays in Phase 7.
+Status updated 2026-11-16: the user approved the production cutover. The production public API, editor and authenticated GitHub synchronization are active; staging editing and ingestion are disabled. The user subsequently chose to perform Webnode publication personally; no Webnode changes or coach announcements have been made by the agent. See [the current cutover record](production-cutover.md) and historical [production validation results](production-validation.md). SportAdmin team lifecycle automation stays in Phase 7.
 
 ## Verified today
 
@@ -63,9 +63,9 @@ Before any production editorial write, Webnode can be pointed back to the unchan
 ## Remaining gates
 
 - Observe the first successful scheduled staging ingestion; initial manual GitHub execution is verified.
-- Explicit Webnode/coach-portal cutover approval; production provisioning and validation deployment are already approved and completed.
-- Final consistent data/media refresh under a short editing freeze, followed by production editor activation, real coach login and authenticated mutation/upload canaries.
-- Production GitHub environment/independent ingestion secret, approved scheduler switch and observed production scheduled execution.
+- User publication of the prepared production embed and youth-directory block in Webnode; cutover approval is already granted.
+- Individual coach login/publish acceptance on the final published Webnode page. Real administrator login, private upload/preview and unchanged-content publish canaries have passed; frozen data parity and production editor activation are complete.
+- Observe a production scheduled ingestion. The protected production environment, independent secret, scheduler switch and successful all-team production dispatch are complete.
 - Owner/notification/backup-retention confirmation and production canary checks.
 - Approved Webnode embed plus youth-directory publication and final production URL announcement.
 
