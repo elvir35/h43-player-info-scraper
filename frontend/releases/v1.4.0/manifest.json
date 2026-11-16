@@ -1,0 +1,18 @@
+{
+  "version": "1.4.0",
+  "environment": "staging",
+  "files": {
+    "team-page.js": {
+      "bytes": 14206,
+      "integrity": "sha384-Q8UDomoYHeDXZT3kcO2KqpB4OXIRBBD5el3owHRsDR0eyW0+Q0T2t4NXskPOwxl+"
+    },
+    "team-page.css": {
+      "bytes": 7039,
+      "integrity": "sha384-em5C17iAiOXhr/9Kt28qbCxQ2TD8OwsYnG7XiwWDRMHlnXA8zdVDusISu2Y+XX6e"
+    },
+    "h43-badge.png": {
+      "bytes": 50176,
+      "integrity": "sha384-WY5ljnwMKvaCRV/vX0TZmOJ20X264TgmwG7XBl8c7kIdOeAkeMo+gzC024pcLjCt"
+    }
+  }
+}

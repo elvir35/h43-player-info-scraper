@@ -4,3 +4,36 @@
 *.egg-info/
 __pycache__/
 .pytest_cache/
+.test-tmp/
+.roster-payloads/
+node_modules/
+worker/dist/
+.wrangler/
+.dev.vars*
+.env*
+worker/wrangler.local.jsonc
+worker/wrangler.remote.jsonc
+worker/.test-output*
+.backups/
+worker/.staging/
+worker/wrangler.staging.generated.jsonc
+frontend/dist/
+frontend/.build/
+frontend/test-results/
+frontend/staging-results/
+frontend/staging-results-tabs/
+frontend/roster-staging-results/
+admin/dist/
+admin/test-results/
+admin/playwright-report/
+worker/wrangler.admin.*.generated.jsonc
+frontend/playwright-report/
+
+# Private production preparation and generated output
+worker/.production/
+worker/wrangler.production.generated.jsonc
+frontend/dist-production/
+frontend/.build-production/
+admin/dist-production/
+# Shareable screenshots are delivery artifacts, not repository source
+artifacts/

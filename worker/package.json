@@ -1,0 +1,39 @@
+{
+  "name": "h43-youth-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts src/sources.ts --bundle --format=esm --platform=browser --target=es2022 --outdir=dist && esbuild src/admin.ts --bundle --format=esm --platform=browser --target=es2022 --external:node:buffer --inject:src/node-buffer.ts --outdir=dist",
+    "typecheck": "tsc --noEmit && tsc -p ../frontend/tsconfig.json",
+    "build:frontend": "node ../frontend/scripts/build.mjs",
+    "build:admin": "node ../admin/scripts/build.mjs",
+    "dev:admin": "npm run build && npm run build:admin && node ../admin/scripts/dev.mjs",
+    "test:admin-ui": "playwright test --config ../admin/playwright.config.mjs",
+    "dev:frontend": "npm run build:frontend && node ../frontend/scripts/serve.mjs",
+    "test:frontend": "playwright test --config ../frontend/playwright.config.mjs",
+    "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs",
+    "dev": "wrangler dev --env development --local",
+    "migrate:local": "wrangler d1 migrations apply DB --env development --local"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261110.1",
+    "@playwright/test": "1.65.0",
+    "@types/node": "22.20.5",
+    "esbuild": "0.28.2",
+    "miniflare": "4.20260730.0",
+    "typescript": "5.9.3",
+    "wrangler": "4.160.0"
+  },
+  "overrides": {
+    "sharp": "0.35.5",
+    "undici": "7.30.1"
+  },
+  "dependencies": {
+    "jose": "6.2.17",
+    "jpeg-js": "0.4.4"
+  }
+}
