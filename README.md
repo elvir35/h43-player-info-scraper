@@ -1,5 +1,70 @@
 # H43 Lund Squad Scraper
 
+## Coach portal (Phase 5, local candidate)
+
+The Swedish editor, Access JWT verification, team-scoped permissions, private drafts/preview,
+published revision history and R2 photo flow are locally implemented/tested. **Not deployed:**
+real Access/R2 configuration and explicit Phase 5 staging approval remain required.
+See [admin architecture/setup](docs/youth-pages/admin-architecture.md),
+[admin security](docs/youth-pages/admin-security.md) and
+[coach guide](docs/youth-pages/coach-user-guide.md).
+Run `npm run dev:admin` from `worker/` for the loopback-only synthetic demonstration.
+
+## Youth team frontend (Phase 4)
+
+The reusable names-only Webnode widget is deployed to the [P11 staging preview](https://h43-youth-api-staging.elvir-arslanovic.workers.dev/preview/p11/).
+See [frontend build, tests, exact embed and rollback](docs/youth-pages/frontend.md) and
+[remaining backend/production release blockers](docs/youth-pages/backend-issues.md).
+Production pages and senior functionality are unchanged; no coach portal is implemented.
+
+## Youth roster synchronization (Phases 2–3)
+
+SportAdmin owns player and coach membership. The separate youth scraper reads
+the public P11 roster (group `378673`) and returns names only. It does not use
+the senior portrait/age schema or write to the senior data files.
+
+```bash
+python scripts/scrape_youth_roster.py
+python scripts/scrape_youth_roster.py --team-id p11 --team-name P11 --group-id 378673
+```
+
+The default output contains status and counts, never names. Optional
+`--output .roster-payloads/p11.json` writes a private UTF-8 transport payload
+atomically. Do not commit live youth payloads or publish them as artifacts.
+
+A complete, validated page synchronizes both lists, including automatic
+additions/removals and verified empty sections. Missing/changed/incomplete
+sections, HTTP failures and persistence failures retain the last valid roster.
+There are no player approval states, roster editor or manual removals. Applicable
+publication authorization must be established before enabling public delivery.
+
+Phase 3 implements D1 persistence, authenticated ingestion and the versioned
+public Worker API alongside the Phase 2 parser. The in-memory store remains
+test-only; no temporary operational membership store is used. See
+[local development and deployment](docs/youth-pages/deployment.md) and the
+[security review](docs/youth-pages/security-review.md). No production deployment
+or frontend/coach portal is included.
+
+The new `scrape-youth-roster.yml` workflow reuses GitHub Actions but is disabled
+unless repository variable `YOUTH_ROSTER_ENABLED=true`. It validates
+and logs counts only unless `YOUTH_ROSTER_SYNC_ENABLED=true` connects the
+protected environment's `H43_API_URL` and dedicated `H43_INGEST_TOKEN` secret. `YOUTH_ROSTER_INTERVAL_HOURS` defaults to `6` and supports
+`1, 2, 3, 4, 6, 8, 12, 24`; an hourly UTC trigger gates due scraping. Manual
+dispatch bypasses the hour gate. Team variables are `YOUTH_ROSTER_TEAM_ID`,
+`YOUTH_ROSTER_TEAM_NAME`, and `YOUTH_ROSTER_GROUP_ID`, defaulting to P11.
+No variables/secrets were enabled and no production deployment was performed.
+For authenticated synchronization use `python scripts/sync_youth_roster.py`
+with credentials set securely in environment variables, never command arguments.
+Worker checks run from `worker/`: `npm ci`, `npm run typecheck`, `npm test`.
+
+Run all senior/youth fixture tests with `python -m pytest`. See the
+[architecture](docs/youth-pages/architecture.md),
+[integration evidence](docs/youth-pages/sportadmin-integration.md),
+[synchronization contract](docs/youth-pages/api-contract.md), and
+[delivery plan](docs/youth-pages/implementation-plan.md).
+
+## Senior squads
+
 This repository scrapes the publicly visible player and coach/leader lists for H43 Lund senior squads from SportAdmin:
 
 - Herrar A: https://h43lund.web.sportadmin.se/grupp/?ID=125511

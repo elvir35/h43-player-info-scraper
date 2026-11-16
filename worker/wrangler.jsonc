@@ -1,0 +1,50 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "h43-youth-api-unconfigured",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-30",
+  "workers_dev": false,
+  "preview_urls": false,
+  "env": {
+    "development": {
+      "name": "h43-youth-api-development",
+      "vars": {
+        "ENVIRONMENT": "development",
+        "ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:8787",
+        "PUBLIC_API_ENABLED": "true"
+      },
+      "d1_databases": [{
+        "binding": "DB",
+        "database_name": "h43-youth-development",
+        "database_id": "LOCAL-ONLY-NOT-A-REMOTE-ID",
+        "migrations_dir": "migrations"
+      }],
+      "ratelimits": [{"name": "RATE_LIMITER", "namespace_id": "43011", "simple": {"limit": 120, "period": 60}}]
+    },
+    "staging": {
+      "name": "h43-youth-api-staging",
+      "workers_dev": false,
+      "assets": {
+        "directory": "../frontend/dist",
+        "run_worker_first": ["/api/*"],
+        "not_found_handling": "none"
+      },
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "ALLOWED_ORIGINS": "",
+        "PUBLIC_API_ENABLED": "false"
+      },
+      "ratelimits": [{"name": "RATE_LIMITER", "namespace_id": "43012", "simple": {"limit": 120, "period": 60}}]
+    },
+    "production": {
+      "name": "h43-youth-api-production",
+      "workers_dev": false,
+      "vars": {
+        "ENVIRONMENT": "production",
+        "ALLOWED_ORIGINS": "https://www.h43lund.se,https://h43lund.se",
+        "PUBLIC_API_ENABLED": "false"
+      },
+      "ratelimits": [{"name": "RATE_LIMITER", "namespace_id": "43013", "simple": {"limit": 120, "period": 60}}]
+    }
+  }
+}

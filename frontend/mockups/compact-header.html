@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>H43 P11 – förslag på kompakt laghuvud</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#edf2f6;color:#142c45;font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+    .page{max-width:1180px;margin:42px auto;padding:0 24px}
+    .note{margin:0 0 16px;color:#526579;font-size:11px;font-weight:650;letter-spacing:.12em}
+    .widget{background:#f5f8fa;border:1px solid #dce5ec;border-radius:12px;overflow:hidden}
+    .team-header{display:flex;align-items:center;justify-content:space-between;gap:24px;background:#fff;border-top:4px solid #075da7;padding:23px 32px}
+    .eyebrow{margin:0 0 3px;color:#075da7;font-size:10px;letter-spacing:.15em;font-weight:750}
+    h1{margin:0;font-size:32px;line-height:1.15;letter-spacing:-.035em;font-weight:800}
+    .welcome{margin:6px 0 0;color:#526579;font-size:14px}
+    .recruit{display:inline-flex;align-items:center;justify-content:center;gap:16px;padding:11px 17px;min-height:44px;border-radius:6px;background:#efc460;color:#072d50;font-size:13px;font-weight:750;text-decoration:none;white-space:nowrap}
+    .recruit span{font-size:18px;line-height:1}
+    .tabs{display:flex;gap:4px;background:#fff;border-top:1px solid #edf1f5;border-bottom:1px solid #dce5ec;padding:0 24px;overflow-x:auto;scrollbar-width:thin}
+    .tab{padding:17px 20px;border:0;border-bottom:3px solid transparent;background:transparent;color:#526579;font:650 13px/1.5 system-ui;cursor:pointer;white-space:nowrap}
+    .tab[aria-selected=true]{color:#075da7;border-bottom-color:#075da7}
+    .tab:hover{background:#f4f8fb;color:#075da7}
+    .tab:focus-visible,.recruit:focus-visible{outline:3px solid #a05d00;outline-offset:-3px}
+    .content{padding:28px 32px 32px}
+    .panel{padding:28px;background:#fff;border:1px solid #dce5ec;border-radius:9px;min-height:225px}
+    .panel[hidden]{display:none}
+    .panel .eyebrow{margin-bottom:10px}
+    h2{font-size:25px;line-height:1.3;letter-spacing:-.025em;margin:0 0 15px;font-weight:750}
+    .description{font-size:17px;line-height:1.8;max-width:680px;margin:0;color:#34516a}
+    .tip{color:#687989;font-size:13px;margin:20px 0 0}
+    .footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 32px;background:#e7eef4;color:#526579;font-size:11px}
+    .footer strong{font-size:10px;letter-spacing:.12em}
+    .explanation{max-width:670px;margin:24px 0 0;color:#526579;font-size:13px;line-height:1.8}
+    @media(max-width:600px){
+      .page{margin:20px auto;padding:0 12px}.note{font-size:9px;letter-spacing:.1em}
+      .team-header{display:block;padding:18px 20px}h1{font-size:27px}.welcome{font-size:13px;margin-top:5px}
+      .recruit{margin-top:14px;min-height:40px;padding:9px 13px;font-size:12px;gap:14px}
+      .tabs{padding:0 8px;gap:0}.tab{flex:1 0 auto;padding:15px 10px;font-size:12px}
+      .content{padding:20px 12px 24px}.panel{padding:23px 19px;min-height:255px}h2{font-size:23px}.description{font-size:16px;line-height:1.8}
+      .footer{padding:16px 20px;font-size:10px}.footer span{max-width:190px}.explanation{font-size:12px;margin:20px 4px}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <p class="note">DESIGNFÖRSLAG · KOMPAKT LAGHUVUD</p>
+    <article class="widget" aria-label="H43 Lund P11 – designförslag">
+      <header class="team-header">
+        <div><p class="eyebrow">VÅRA UNGDOMSLAG</p><h1>H43 Lund P11</h1><p class="welcome">Välkommen till laget</p></div>
+        <a class="recruit" href="#contact">Vill du spela med oss? <span aria-hidden="true">↗</span></a>
+      </header>
+      <div class="tabs" role="tablist" aria-label="Lagets innehåll">
+        <button class="tab" id="tab-overview" role="tab" aria-selected="true" aria-controls="overview">Översikt</button>
+        <button class="tab" id="tab-matches" role="tab" aria-selected="false" aria-controls="matches" tabindex="-1">Matcher</button>
+        <button class="tab" id="tab-calendar" role="tab" aria-selected="false" aria-controls="calendar" tabindex="-1">Kalender</button>
+        <button class="tab" id="tab-players" role="tab" aria-selected="false" aria-controls="players" tabindex="-1">Spelare</button>
+        <button class="tab" id="tab-contact" role="tab" aria-selected="false" aria-controls="contact" tabindex="-1">Kontakt</button>
+      </div>
+      <div class="content">
+        <section class="panel" id="overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+          <p class="eyebrow">VÅRT LAG</p><h2>Handboll och gemenskap</h2>
+          <p class="description">Här hittar du lagets matcher, aktiviteter och trupp. Välj en flik ovan för att följa laget genom handbollssäsongen!</p>
+          <p class="tip">Lagets välkomsttext får plats här när den är publicerad.</p>
+        </section>
+        <section class="panel" id="matches" role="tabpanel" aria-labelledby="tab-matches" tabindex="0" hidden><p class="eyebrow">MATCHER</p><h2>Kommande matcher</h2><p class="description">Designförslag: här visas lagets matcher från match-API:et.</p></section>
+        <section class="panel" id="calendar" role="tabpanel" aria-labelledby="tab-calendar" tabindex="0" hidden><p class="eyebrow">LAGKALENDERN</p><h2>På gång i laget</h2><p class="description">Designförslag: här visas P11:s aktiviteter från kalender-API:et.</p></section>
+        <section class="panel" id="players" role="tabpanel" aria-labelledby="tab-players" tabindex="0" hidden><p class="eyebrow">TRUPPEN</p><h2>Våra spelare</h2><p class="description">Designförslag: här visas spelarnas namn från SportAdmin.</p></section>
+        <section class="panel" id="contact" role="tabpanel" aria-labelledby="tab-contact" tabindex="0" hidden><p class="eyebrow">KONTAKT</p><h2>Ledare & kontakt</h2><p class="description">Designförslag: här visas lagets ledare och publicerade kontaktuppgifter.</p></section>
+      </div>
+      <footer class="footer"><strong>H43 LUND HF</strong><span>Trupp från SportAdmin · Tider i svensk tid</span></footer>
+    </article>
+    <p class="explanation">Ett ljust, kompakt laghuvud ersätter den stora blå ytan. Klubbmärket finns redan i sidans meny, så lagets namn och innehåll får stå i fokus här.</p>
+  </main>
+  <script>
+    const tabs=[...document.querySelectorAll('[role=tab]')];
+    function select(tab,focus=false){for(const item of tabs){const active=item===tab;item.setAttribute('aria-selected',String(active));item.tabIndex=active?0:-1;document.getElementById(item.getAttribute('aria-controls')).hidden=!active;}if(focus)tab.focus();}
+    tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>select(tab));tab.addEventListener('keydown',e=>{let next;if(e.key==='ArrowRight')next=(index+1)%tabs.length;else if(e.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=tabs.length-1;else return;e.preventDefault();select(tabs[next],true);});});
+    document.querySelector('.recruit').addEventListener('click',e=>{e.preventDefault();select(document.getElementById('tab-contact'));document.getElementById('contact').focus();});
+  </script>
+</body>
+</html>

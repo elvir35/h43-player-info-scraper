@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "h43-youth-admin-unconfigured",
+  "main": "src/admin.ts",
+  "compatibility_date": "2026-07-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {"directory":"../admin/dist","binding":"ASSETS","run_worker_first":true,"not_found_handling":"none"},
+  "env": {
+    "development": {
+      "name":"h43-youth-admin-development",
+      "vars":{"ENVIRONMENT":"development","ADMIN_ENABLED":"false","ADMIN_ORIGIN":"http://localhost:8788","ACCESS_ISSUER":"","ACCESS_AUD":"","PUBLIC_API_ORIGIN":"http://localhost:8787"},
+      "d1_databases":[{"binding":"DB","database_name":"h43-youth-development","database_id":"LOCAL-ONLY-NOT-A-REMOTE-ID","migrations_dir":"migrations"}],
+      "r2_buckets":[{"binding":"IMAGES","bucket_name":"h43-youth-images-development"}]
+    },
+    "staging": {
+      "name":"h43-youth-admin-staging",
+      "vars":{"ENVIRONMENT":"staging","ADMIN_ENABLED":"false","ADMIN_ORIGIN":"","ACCESS_ISSUER":"","ACCESS_AUD":"","PUBLIC_API_ORIGIN":""},
+      "ratelimits":[{"name":"RATE_LIMITER","namespace_id":"43014","simple":{"limit":120,"period":60}}]
+    },
+    "production": {
+      "name":"h43-youth-admin-production",
+      "vars":{"ENVIRONMENT":"production","ADMIN_ENABLED":"false","ADMIN_ORIGIN":"https://admin.h43lund.se","ACCESS_ISSUER":"","ACCESS_AUD":"","PUBLIC_API_ORIGIN":""},
+      "ratelimits":[{"name":"RATE_LIMITER","namespace_id":"43015","simple":{"limit":120,"period":60}}]
+    }
+  }
+}

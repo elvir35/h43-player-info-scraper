@@ -1,0 +1,3 @@
+# Frozen assets must retain exact bytes for integrity checks and rollback.
+frontend/releases/** -text
+frontend/releases-production/** -text

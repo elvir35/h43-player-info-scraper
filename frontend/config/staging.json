@@ -1,0 +1,7 @@
+{
+  "environment": "staging",
+  "apiBaseUrl": "https://h43-youth-api-staging.elvir-arslanovic.workers.dev/api/v1",
+  "clubCalendarUrl": "https://www.h43lund.se/kalender/",
+  "clubContactUrl": "https://www.h43lund.se/kontakt/",
+  "registrationUrl": "https://entry.sportadmin.se/groupsOverview?uid=fjtzIS"
+}

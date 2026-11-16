@@ -1,0 +1,594 @@
+<section class="h43y" id="h43y-youth-teams" aria-labelledby="h43y-title">
+  <style>
+    .h43y,
+    .h43y * {
+      box-sizing: border-box;
+    }
+
+    .h43y {
+      --h43-blue: #05569d;
+      --h43-blue-dark: #053f7a;
+      --h43-blue-soft: #eaf4ff;
+      --h43-line: #d8e2ee;
+      --h43-text: #10233f;
+      --h43-muted: #5e6f83;
+      --h43-red: #e33235;
+      position: relative;
+      isolation: isolate;
+      width: min(100%, 1240px);
+      margin: 0 auto;
+      padding: clamp(24px, 4vw, 48px) clamp(16px, 3vw, 28px) clamp(44px, 6vw, 72px);
+      color: var(--h43-text);
+      background:
+        linear-gradient(180deg, rgba(234, 244, 255, 0.78), rgba(255, 255, 255, 0.98) 44%),
+        radial-gradient(circle at 8% 18%, rgba(5, 86, 157, 0.08), transparent 28%),
+        radial-gradient(circle at 94% 34%, rgba(25, 134, 255, 0.07), transparent 26%);
+      font-family: inherit;
+      overflow: hidden;
+    }
+
+    .h43y::before,
+    .h43y::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      width: 330px;
+      height: 330px;
+      border: 2px solid rgba(5, 86, 157, 0.08);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .h43y::before {
+      top: 118px;
+      left: -210px;
+      box-shadow:
+        0 0 0 34px rgba(255, 255, 255, 0.36),
+        0 0 0 64px rgba(5, 86, 157, 0.035);
+    }
+
+    .h43y::after {
+      right: -220px;
+      bottom: 220px;
+      border-color: rgba(227, 50, 53, 0.08);
+      box-shadow:
+        0 0 0 32px rgba(255, 255, 255, 0.34),
+        0 0 0 62px rgba(5, 86, 157, 0.035);
+    }
+
+    .h43y a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .h43y__hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 26px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--h43-line);
+    }
+
+    .h43y__title {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin: 0 0 10px;
+      color: var(--h43-blue-dark);
+      font-size: clamp(34px, 4vw, 56px);
+      line-height: 1.05;
+      letter-spacing: 0;
+      font-weight: 800;
+    }
+
+    .h43y__title::before {
+      content: "";
+      width: 6px;
+      height: 0.92em;
+      border-radius: 99px;
+      background: linear-gradient(180deg, #1986ff, var(--h43-blue));
+      flex: 0 0 auto;
+    }
+
+    .h43y__intro {
+      max-width: 680px;
+      margin: 0;
+      color: var(--h43-muted);
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    .h43y__summary {
+      display: grid;
+      grid-template-columns: repeat(2, auto);
+      gap: 10px;
+    }
+
+    .h43y__summary-item {
+      min-width: 116px;
+      padding: 12px 14px;
+      border: 1px solid var(--h43-line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 10px 30px rgba(16, 35, 63, 0.07);
+      text-align: center;
+    }
+
+    .h43y__summary-number {
+      display: block;
+      color: var(--h43-blue);
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .h43y__summary-label {
+      display: block;
+      margin-top: 4px;
+      color: var(--h43-muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .h43y__tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 26px;
+    }
+
+    .h43y__segments {
+      display: inline-grid;
+      grid-template-columns: repeat(3, minmax(86px, 1fr));
+      border: 1px solid var(--h43-line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 8px 26px rgba(16, 35, 63, 0.06);
+    }
+
+    .h43y__filter {
+      min-height: 46px;
+      padding: 0 18px;
+      border: 0;
+      border-right: 1px solid var(--h43-line);
+      background: transparent;
+      color: var(--h43-blue-dark);
+      cursor: pointer;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .h43y__filter:last-child {
+      border-right: 0;
+    }
+
+    .h43y__filter[aria-pressed="true"] {
+      background: var(--h43-blue);
+      color: #fff;
+    }
+
+    .h43y__grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(16px, 2vw, 28px);
+    }
+
+    .h43y__card {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-width: 0;
+      border: 1px solid var(--h43-line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 14px 34px rgba(16, 35, 63, 0.1);
+      overflow: hidden;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .h43y__card.is-hidden {
+      display: none !important;
+    }
+
+    .h43y__card:hover,
+    .h43y__card:focus-visible {
+      border-color: var(--h43-blue);
+      box-shadow: 0 18px 44px rgba(5, 86, 157, 0.18);
+      transform: translateY(-3px);
+      outline: none;
+    }
+
+    .h43y__image-wrap {
+      position: relative;
+      aspect-ratio: 1280 / 881;
+      background: var(--h43-blue-soft);
+      overflow: hidden;
+    }
+
+    .h43y__image {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      transition: transform 240ms ease;
+    }
+
+    .h43y__card:hover .h43y__image,
+    .h43y__card:focus-visible .h43y__image {
+      transform: scale(1.025);
+    }
+
+    .h43y__badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1;
+      display: inline-flex;
+      min-height: 28px;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 7px;
+      background: var(--h43-blue);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(5, 86, 157, 0.3);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .h43y__body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 16px;
+      border-top: 4px solid var(--h43-blue);
+    }
+
+    .h43y__name {
+      margin: 0 0 7px;
+      color: var(--h43-blue-dark);
+      font-size: 20px;
+      line-height: 1.18;
+      font-weight: 900;
+    }
+
+    .h43y__meta {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      color: var(--h43-muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .h43y__meta svg {
+      width: 15px;
+      height: 15px;
+      color: var(--h43-blue);
+    }
+
+    .h43y__action {
+      display: inline-flex;
+      gap: 9px;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 13px;
+      border-radius: 7px;
+      color: var(--h43-blue);
+      font-size: 14px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .h43y__card:hover .h43y__action,
+    .h43y__card:focus-visible .h43y__action {
+      background: var(--h43-blue);
+      color: #fff;
+    }
+
+    .h43y__empty {
+      display: none;
+      padding: 28px;
+      border: 1px dashed var(--h43-line);
+      border-radius: 8px;
+      color: var(--h43-muted);
+      background: #fff;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .h43y[data-empty="true"] .h43y__empty {
+      display: block;
+    }
+
+    @media (max-width: 980px) {
+      .h43y__hero {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+
+      .h43y__summary {
+        grid-template-columns: repeat(2, minmax(0, 150px));
+      }
+
+      .h43y__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .h43y {
+        padding-top: 22px;
+      }
+
+      .h43y::before,
+      .h43y::after {
+        width: 220px;
+        height: 220px;
+      }
+
+      .h43y::before {
+        top: 90px;
+        left: -160px;
+      }
+
+      .h43y::after {
+        right: -170px;
+        bottom: 340px;
+      }
+
+      .h43y__title {
+        font-size: 34px;
+      }
+
+      .h43y__tools {
+        width: 100%;
+      }
+
+      .h43y__segments {
+        width: 100%;
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .h43y__filter {
+        padding: 0 10px;
+      }
+
+      .h43y__grid {
+        grid-template-columns: 1fr;
+      }
+
+      .h43y__body {
+        grid-template-columns: 1fr;
+      }
+
+      .h43y__action {
+        justify-content: space-between;
+        width: 100%;
+        background: var(--h43-blue-soft);
+      }
+    }
+  </style>
+
+  <div class="h43y__hero">
+    <div>
+      <h1 class="h43y__title" id="h43y-title">Våra ungdomslag</h1>
+      <p class="h43y__intro">
+        Här hittar du alla våra ungdomslag. Använd filtren för att hitta rätt lag.
+      </p>
+    </div>
+    <div class="h43y__summary" aria-label="Sammanfattning">
+      <div class="h43y__summary-item">
+        <span class="h43y__summary-number">11</span>
+        <span class="h43y__summary-label">Lag</span>
+      </div>
+      <div class="h43y__summary-item">
+        <span class="h43y__summary-number">F9–P15</span>
+        <span class="h43y__summary-label">Åldrar</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="h43y__tools" aria-label="Filtrera lag">
+    <div class="h43y__segments" role="group" aria-label="Filtrera på kön">
+      <button class="h43y__filter" type="button" data-filter="all" aria-pressed="true">Alla</button>
+      <button class="h43y__filter" type="button" data-filter="flickor" aria-pressed="false">Flickor</button>
+      <button class="h43y__filter" type="button" data-filter="pojkar" aria-pressed="false">Pojkar</button>
+    </div>
+  </div>
+
+  <div class="h43y__grid" data-team-grid="">
+    <a class="h43y__card" href="/lagsida/?team=f2011" data-team-id="f15" data-gender="flickor" data-age="2011">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/f00f98de42c3b8bc487d1933b5ffe54974dd7ce087e933fa633345b93736eef0_L.jpg" alt="Flickor 2011" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Flickor 2011</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=p2011-2012" data-team-id="p15" data-gender="pojkar" data-age="2011/2012">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/fb8ebdac2fb4ac5374ab0c6f83ae32bf115f7b0b247cd5f85fd1176c4217ca1d_L.jpg" alt="Pojkar 2011/2012" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Pojkar 2011/2012</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=f2012-2013" data-team-id="f14" data-gender="flickor" data-age="2012/2013">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/a8ee26f7128ff9442ea77e71edc7e52572c666109d399760f7657efc1544be5d_L.jpg" alt="Flickor 2012/2013" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Flickor 2012/2013</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=f2014" data-team-id="f12" data-gender="flickor" data-age="2014">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/ab3e3a6792d18a60c778db2372fbdfa7773c5d049b8a991d532a3453ebcc177a_L.webp" alt="Flickor 2014" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Flickor 2014</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=p2014" data-team-id="p12" data-gender="pojkar" data-age="2014">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/140a9dbfa37ab2cebeffe1dd86fe4d4741c8d285d42302b89a935ba5b6866d03_L.png" alt="Pojkar 2014" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Pojkar 2014</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=f2015" data-team-id="f11" data-gender="flickor" data-age="2015">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/f3d49788e20cbd334946fd519433448685044dea953e5d18c86c48db7383c145_L.jpg" alt="Flickor 2015" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Flickor 2015</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=p2015" data-team-id="p11" data-gender="pojkar" data-age="2015">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/77fc7cdecf63b24214dbe722235d2c7892d3e2ffe045b1a86981e341bfbe1d43_L.jpg" alt="Pojkar 2015" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Pojkar 2015</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=f2016" data-team-id="f10" data-gender="flickor" data-age="2016">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/83241b83fd150a31eac3e6e1100952352c48d561c4fe52947de21977bf15b49d_L.jpg" alt="Flickor 2016" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Flickor 2016</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=p2016" data-team-id="p10" data-gender="pojkar" data-age="2016">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/d5db7a901656ab3155c082fa5d0def668d1a285a7c576d8eac908d631f7943e3_L.jpg" alt="Pojkar 2016" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Pojkar 2016</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=f2017" data-team-id="f9" data-gender="flickor" data-age="2017">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/c2ca61833ba0fe35e6cdf9835341016ffbdaec9c2f47c6f19405398e8064d181_L.jpg" alt="Flickor 2017" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Flickor 2017</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+
+    <a class="h43y__card" href="/lagsida/?team=p2017" data-team-id="p9" data-gender="pojkar" data-age="2017">
+      <div class="h43y__image-wrap">
+        <img class="h43y__image" src="https://cdn.sportadmin.se/491/h/42/1735a7ab0d2462c5aaf188f69a11682422f887a13b3e8214f42292d1719c1d1b_L.jpg" alt="Pojkar 2017" loading="lazy">
+      </div>
+      <div class="h43y__body">
+        <div>
+          <h2 class="h43y__name">Pojkar 2017</h2>
+        </div>
+        <span class="h43y__action">Visa laget <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+  </div>
+
+  <p class="h43y__empty" data-empty-message="">Inga lag matchar de valda filtren.</p>
+
+  <script>
+    (function () {
+      function initYouthTeamFilters() {
+        var root = document.getElementById("h43y-youth-teams");
+        if (!root || root.dataset.filtersReady === "true") return;
+
+        var activeGender = "all";
+        var buttons = Array.prototype.slice.call(root.querySelectorAll(".h43y__filter"));
+        var cards = Array.prototype.slice.call(root.querySelectorAll(".h43y__card"));
+
+        if (!buttons.length || !cards.length) return;
+        root.dataset.filtersReady = "true";
+
+        function applyFilters() {
+          var visibleCount = 0;
+
+          cards.forEach(function (card) {
+            var genderMatch = activeGender === "all" || card.getAttribute("data-gender") === activeGender;
+            var isVisible = genderMatch;
+
+            card.classList.toggle("is-hidden", !isVisible);
+            card.setAttribute("aria-hidden", isVisible ? "false" : "true");
+            card.setAttribute("tabindex", isVisible ? "0" : "-1");
+            if (isVisible) visibleCount += 1;
+          });
+
+          root.dataset.empty = visibleCount === 0 ? "true" : "false";
+        }
+
+        buttons.forEach(function (button) {
+          button.addEventListener("click", function () {
+            activeGender = button.getAttribute("data-filter");
+            buttons.forEach(function (item) {
+              item.setAttribute("aria-pressed", item === button ? "true" : "false");
+            });
+            applyFilters();
+          });
+        });
+
+        applyFilters();
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initYouthTeamFilters);
+      } else {
+        initYouthTeamFilters();
+      }
+    })();
+  </script>
+</section>
