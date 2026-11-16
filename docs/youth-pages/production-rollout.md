@@ -1,6 +1,6 @@
 # Production rollout review — 2026-11-16
 
-Status: staging synchronization is enabled and its first manual GitHub run passed. Production infrastructure, deployment and Webnode cutover are not approved or executed. SportAdmin team lifecycle automation stays in Phase 7.
+Status updated 2026-11-16: the user approved isolated production provisioning, migration and deployment for validation. The dedicated production resources are deployed; the public API is enabled for validation and the production editor remains disabled until cutover. Webnode cutover is not approved or executed. See [production validation results](production-validation.md). SportAdmin team lifecycle automation stays in Phase 7.
 
 ## Verified today
 
@@ -40,7 +40,7 @@ Planned hosts are https://h43-youth-api-production.elvir-arslanovic.workers.dev 
 2. Record fresh real account/subdomain/Worker/database inventory in ignored worker/.production/inventory.json; record verified Access organization/application, R2 privacy and existing Images entitlement in .production/access-inventory.json, and issuer/audience in .production/settings.json. Follow the input schema used by productionConfigs and its synthetic tests; never invent resource IDs or put secrets in these files.
 3. From worker/, run node scripts/production-config.mjs, then node scripts/production-config.mjs --check. It generates only production configs and .production/frontend.json; both API/admin start disabled. Verify no existing Worker, route, DB or bucket is referenced.
 4. Build the production-specific assets using node ../frontend/scripts/build.mjs --production-config .production/frontend.json --freeze and node ../admin/scripts/build.mjs --production-config .production/frontend.json. These write frontend/dist-production, frontend/releases-production and admin/dist-production, leaving staging output untouched. Record manifests and exact source revision. Do not use the synthetic build fixture for deployment.
-5. Apply the five reviewed additive migrations only to the verified new production DB with the generated production config. Migrations seed only a disabled/unapproved source identity, not current editorial content. Import the consistent staging state separately: preserve team/member/image IDs, editor grants, active/disabled user state, drafts, revisions and audit history. Copy sanitized image bytes, object keys and content types into private production R2; verify all references and checksums. Do not rerun roster identity creation against an empty DB before copying IDs, because that would detach existing player details/photos.
+5. Apply the five reviewed additive migrations only to the verified new production DB with the generated production config. Migrations seed only an unapproved source identity, not current editorial content. Import the consistent staging state separately: preserve team/member/image IDs, editor grants, active/disabled user state, drafts, revisions and audit history. Copy sanitized image bytes, object keys and content types into private production R2; verify all references and checksums. Do not rerun roster identity creation against an empty DB before copying IDs, because that would detach existing player details/photos.
 6. Use a short announced coach editing freeze for the final consistent D1/R2 export and import, or stop staging mutation delivery for that cutover window. Pause staging roster synchronization during the final copy. Reconcile any publication withdrawals/removals; do not restore old membership from earlier backups. Existing public pages continue reading staging until cutover. Reopen editing only on the chosen authoritative portal after verification; do not leave two independent editable copies.
 7. Configure the separate exact-host Access app and production-only CSRF secret. Generate fresh production per-team ingestion tokens and store only their digests in the production API Worker. Store raw tokens only in the production GitHub environment. Never reuse staging credentials; do not put Cloudflare deployment credentials into the scraper workflow.
 8. After explicit deployment approval, deploy the reviewed disabled API/admin configs with npx wrangler deploy --config wrangler.production.generated.jsonc --env production and npx wrangler deploy --config wrangler.admin.production.generated.jsonc --env production. Verify D1/R2/service/Images/limiter bindings, Access and assets. Only then review and approve the narrow activation diff PUBLIC_API_ENABLED=true and ADMIN_ENABLED=true; the disabled-preparation --check intentionally rejects that activation diff until it is reviewed separately.
@@ -48,7 +48,7 @@ Planned hosts are https://h43-youth-api-production.elvir-arslanovic.workers.dev 
 10. Prepare and approve replacing both central asset URLs in the shared Webnode embed with the verified production version. Replace the youth-directory block with frontend/youth-teams.html after review. On 2026-11-16 the actual /ungdom/ browser DOM still has 11 SportAdmin links and zero shared-page links, so this directory change is necessary for visitors to find the new pages. Validate every birth-year query URL, mobile navigation and one coach publish-to-public link after Webnode publication.
 11. Enable production synchronization with its own verified environment/origin, credentials and explicit YOUTH_ROSTER_PRODUCTION_APPROVED=true. Disable staging synchronization after cutover. Verify a production dispatch and scheduled run, record production versions/configuration/manifests and announce the new coach login URL.
 
-These are future gated commands, not steps already executed. A no-op disabled generator result is not production authorization. No paid Workers plan or new subscription is proposed; the existing approved Images/R2 usage terms remain applicable.
+This sequence is the rollout checklist; the linked validation report distinguishes completed work from remaining cutover steps. The generated disabled configurations remain recovery baselines, not a statement of current live flags. A separate ignored validation configuration enables only the public production API; the production editor remains disabled. No paid Workers plan or new subscription was added; the existing approved Images/R2 usage terms remain applicable.
 
 ## Monitoring, retention and rollback
 
@@ -63,8 +63,9 @@ Before any production editorial write, Webnode can be pointed back to the unchan
 ## Remaining gates
 
 - Observe the first successful scheduled staging ingestion; initial manual GitHub execution is verified.
-- Explicit production provisioning/deployment/cutover approval.
-- Actual production resource IDs, exact-host Access app, independent secrets and verified data/media copy.
+- Explicit Webnode/coach-portal cutover approval; production provisioning and validation deployment are already approved and completed.
+- Final consistent data/media refresh under a short editing freeze, followed by production editor activation, real coach login and authenticated mutation/upload canaries.
+- Production GitHub environment/independent ingestion secret, approved scheduler switch and observed production scheduled execution.
 - Owner/notification/backup-retention confirmation and production canary checks.
 - Approved Webnode embed plus youth-directory publication and final production URL announcement.
 
