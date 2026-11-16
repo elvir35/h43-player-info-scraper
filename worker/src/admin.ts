@@ -160,7 +160,9 @@ export default {
   async fetch(request:Request,env:Env):Promise<Response>{
     const requestId=crypto.randomUUID();let status=503;
     try{
-      const url=new URL(request.url);if(url.search)fail(400,'QUERY_NOT_SUPPORTED');
+      const url=new URL(request.url);
+      const teamLanding=request.method==='GET'&&url.pathname==='/'&&url.searchParams.size===1&&/^[a-z0-9][a-z0-9-]{0,31}$/.test(url.searchParams.get('team')||'');
+      if(url.search&&!teamLanding)fail(400,'QUERY_NOT_SUPPORTED');
       if(!env.RATE_LIMITER&&env.ENVIRONMENT!=='development')fail(503,'RATE_LIMITER_UNAVAILABLE');
       if(env.RATE_LIMITER&&!(await env.RATE_LIMITER.limit({key:'ip:'+(request.headers.get('CF-Connecting-IP')??'unknown')})).success)fail(429,'RATE_LIMITED');
       const actor=await authenticate(request,env);

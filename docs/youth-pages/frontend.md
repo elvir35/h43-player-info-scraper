@@ -1,5 +1,7 @@
 # Phase 4: reusable Webnode frontend
 
+Current update: production **v1.25.0** adds the [team-specific coach editor link and access-request contact](coach-access-link.md). Use the current [production embed](../../frontend/webnode-production-embed.html); the older delivery notes below are historical and are superseded by the current release and [production cutover record](production-cutover.md).
+
 Implemented and deployed to **staging only**, 2026-11-11. The [P11 preview](https://h43-youth-api-staging.elvir-arslanovic.workers.dev/preview/p11/) uses the real, approved staging API. Production routes, existing Workers, Webnode pages and senior scraping remain unchanged. No Phase 5 portal was built.
 
 **Current release: v1.2.0, compact blue header.** The duplicate badge and tall hero spacing are removed, retaining the original blue gradient/court-line background. The team title and recruitment button share a compact desktop row and stack on mobile. See [compact header release notes](compact-header-release.md). Översikt, Matcher, Kalender, Spelare and Kontakt still show one panel at a time with keyboard controls and selection preserved during refresh. Matches and calendar continue to use their separate team-filtered sources. Earlier v1.0.0/v1.1.0 remain immutable and hosted.

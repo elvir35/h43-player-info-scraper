@@ -34,7 +34,7 @@ const server=createServer(async(req,res)=>{try{
   if(url.pathname==='/__test/reset'&&req.method==='POST'){await seed();res.writeHead(200,{'Content-Type':'application/json'});res.end('{}');return;}
   if(url.pathname==='/__test/expire'&&req.method==='POST'){tokens.coach=await token('coach',true);res.writeHead(200,{'Content-Type':'application/json'});res.end('{}');return;}
   let response;
-  if(url.pathname==='/__test/public-widget')response=new Response('<!doctype html><html lang="sv"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="h43-team-page" data-team-id="p11"></div><script src="/team-assets/v1.24.0/team-page.js" defer></script></body></html>',{headers:{'Content-Type':'text/html'}});
+  if(url.pathname==='/__test/public-widget')response=new Response('<!doctype html><html lang="sv"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="h43-team-page" data-team-id="p11"></div><script src="/team-assets/v1.25.0/team-page.js" defer></script></body></html>',{headers:{'Content-Type':'text/html'}});
   else if(url.pathname.startsWith('/__public/'))response=await publicWorker.fetch('https://public.test'+url.pathname.slice('/__public'.length));
   else if(url.pathname.startsWith('/team-assets/'))response=await asset(new Request(url),'frontend/dist');
   else{const headers=new Headers();for(const [name,value]of Object.entries(req.headers))if(typeof value==='string')headers.set(name,value);if(role!=='anonymous')headers.set('Cf-Access-Jwt-Assertion',tokens[role]);else headers.delete('Cf-Access-Jwt-Assertion');

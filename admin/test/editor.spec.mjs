@@ -1,4 +1,21 @@
 import {createRequire} from 'node:module';const require=createRequire(new URL('../../worker/package.json',import.meta.url));const {test,expect}=require('@playwright/test');
+
+test('team deep links select the requested authorized team after login',async({page})=>{
+  await page.setExtraHTTPHeaders({'X-Test-Identity':'admin'});
+  await page.goto('/?team=p2014');await expect(page.getByRole('heading',{name:'H43 Lund P2014',exact:true})).toBeVisible();await expect(page.locator('#teams button[aria-current="true"]')).toHaveText('H43 Lund P2014');
+  await page.goto('/?team=p2015');await expect(page.getByRole('heading',{name:'H43 Lund P2015',exact:true})).toBeVisible();
+});
+
+test('unassigned team deep link offers access contact without opening another team',async({page,request})=>{
+  const contentRequests=[];page.on('request',r=>{if(/\/teams\/[^/]+\/content$/.test(new URL(r.url()).pathname))contentRequests.push(r.url());});
+  await page.goto('/?team=p2014');await expect(page.getByRole('heading',{name:'Du saknar behörighet till det valda laget',exact:true})).toBeVisible();
+  await expect(page.getByRole('link',{name:'elvir.arslanovic@gmail.com',exact:true})).toHaveAttribute('href',/^mailto:elvir\.arslanovic@gmail\.com/);expect(contentRequests).toEqual([]);expect((await request.get('/api/admin/v1/teams/p12/content')).status()).toBe(403);
+  await page.getByRole('button',{name:'H43 Lund P2015',exact:true}).click();await expect(page.getByRole('heading',{name:'H43 Lund P2015',exact:true})).toBeVisible();
+});
+
+test('coach without assigned teams sees the access request address',async({page})=>{
+  await page.setExtraHTTPHeaders({'X-Test-Identity':'other'});await page.goto('/');await expect(page.getByRole('heading',{name:'Inga lag tilldelade',exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'elvir.arslanovic@gmail.com',exact:true})).toBeVisible();
+});
 test('text-only launch hides uploads and saves editorial content',async({page})=>{
   await page.route('**/api/admin/v1/teams/p11/content',async route=>{const response=await route.fetch();const data=await response.json();data.features={imageUploads:false};await route.fulfill({response,json:data});});
   await open(page);await expect(page.locator('input[type=file]')).toHaveCount(0);

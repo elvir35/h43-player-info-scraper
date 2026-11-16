@@ -12,7 +12,7 @@ async function jwt(user='coach',claims={},options={}){return new SignJWT({email:
 before(async()=>{
   const pair=await generateKeyPair('RS256');privateKey=pair.privateKey;jwk={...await exportJWK(pair.publicKey),kid:'fixture',alg:'RS256',use:'sig'};
   const options={workers:[{name:'admin',modules:true,scriptPath:'dist/admin.js',compatibilityDate:'2026-07-30',compatibilityFlags:['nodejs_compat'],
-    d1Databases:{DB:'shared-phase5'},r2Buckets:{IMAGES:'phase5-private'},serviceBindings:{PUBLIC_API:'public'},bindings:{ENVIRONMENT:'development',ADMIN_ENABLED:'true',IMAGE_UPLOADS_ENABLED:'true',ADMIN_ORIGIN:origin,ACCESS_ISSUER:issuer,ACCESS_AUD:audience,CSRF_SECRET:'synthetic-local-csrf-key-32-characters-minimum',PUBLIC_API_ORIGIN:'https://public.test'},
+    d1Databases:{DB:'shared-phase5'},r2Buckets:{IMAGES:'phase5-private'},serviceBindings:{PUBLIC_API:'public',ASSETS:()=>new Response('<!doctype html><title>Fixture portal</title>',{headers:{'Content-Type':'text/html'}})},bindings:{ENVIRONMENT:'development',ADMIN_ENABLED:'true',IMAGE_UPLOADS_ENABLED:'true',ADMIN_ORIGIN:origin,ACCESS_ISSUER:issuer,ACCESS_AUD:audience,CSRF_SECRET:'synthetic-local-csrf-key-32-characters-minimum',PUBLIC_API_ORIGIN:'https://public.test'},
     outboundService:request=>{if(request.url===issuer+'/cdn-cgi/access/certs')return Response.json({keys:[jwk]});throw new Error('Unexpected admin outbound');}},
     {name:'public',modules:true,scriptPath:'dist/index.js',compatibilityDate:'2026-07-30',d1Databases:{DB:'shared-phase5'},r2Buckets:{IMAGES:'phase5-private'},bindings:{ENVIRONMENT:'development',PUBLIC_API_ENABLED:'true',ALLOWED_ORIGINS:''},outboundService:()=>Response.json([])}]};
   options.workers.push({...options.workers[0],name:'admin-text',r2Buckets:undefined,bindings:{...options.workers[0].bindings,IMAGE_UPLOADS_ENABLED:'false'}});
@@ -46,6 +46,14 @@ beforeEach(async()=>{
 test('unauthenticated API and assets reject forged email headers',async()=>{
   for(const p of ['/','/app.js',path(),'/teams/p11/preview'])assert.equal((await req(p,'GET',undefined,null,{'Cf-Access-Authenticated-User-Email':'admin@example.test'})).status,401);
   assert.equal((await req('/api/admin/v1/me','GET',undefined,'garbage')).status,401);
+});
+
+test('team landing query preserves authentication and never authorizes another team',async()=>{
+  assert.equal((await req('/?team=p2015')).status,200);
+  assert.equal((await req('/?team=p2014')).status,200);
+  assert.equal((await req('/?team=p2015','GET',undefined,null)).status,401);
+  assert.equal((await req(path('content','p12'))).status,403);
+  for(const url of ['/?team=p2015&team=p2014','/?team=p2015&redirect=https://bad.test','/?team=%3Cscript%3E','/app.js?team=p2015','/api/admin/v1/teams?team=p2014'])assert.equal((await req(url)).status,400);
 });
 test('expired, wrong issuer/audience and unauthorized identities are rejected',async()=>{
   for(const token of [await jwt('coach',{}, {exp:1}),await jwt('coach',{}, {audience:'wrong'}),await jwt('coach',{}, {issuer:'https://wrong.cloudflareaccess.com'}),await jwt('coach',{type:'service'})])assert.equal((await req('/api/admin/v1/me','GET',undefined,token)).status,401);

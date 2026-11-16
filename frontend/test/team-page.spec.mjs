@@ -15,9 +15,19 @@ async function mock(page,data=fixture()){
 }
 async function open(page){await page.goto('/preview/p11/');await expect(page.getByRole('heading',{level:1})).toBeVisible();}
 async function tab(page,name){await page.getByRole('tab',{name,exact:true}).click();}
+
+test('coach footer links to the selected team and provides an access-request email on mobile',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  for(const [id,slug] of [['p11','p2015'],['f12','f2014'],['f14','f2012-2013']]){
+    await mock(page,fixture(id));await page.goto('/preview/shared/?team='+slug);
+    const edit=page.getByRole('link',{name:'Ledare – redigera lagsidan',exact:true});await expect(edit).toHaveAttribute('href','https://h43-youth-admin-staging.elvir-arslanovic.workers.dev/?team='+slug);
+    const contact=page.getByRole('link',{name:'Kontakta Elvir',exact:true});await expect(contact).toHaveAttribute('href',/^mailto:elvir\.arslanovic@gmail\.com\?subject=/);
+    await expect(page.getByText('Saknar du behörighet?',{exact:false})).toBeVisible();expect(await page.locator('.h43-ui').evaluate(n=>n.scrollWidth<=n.clientWidth)).toBe(true);
+  }
+});
 test('named contact cards keep each persons email and phone grouped safely',async({page},testInfo)=>{
   const data=fixture();data.contact={email:'first@example.test',phone:null,people:[{name:'Anna Exempel',email:'first@example.test',phone:'070-123 45 67'},{name:'<img src=x onerror=alert(1)>',email:'second@example.test',phone:null}]};await mock(page,data);await open(page);await tab(page,'Kontakt');
-  const cards=page.locator('.h43-contact-card');await expect(cards).toHaveCount(2);await expect(cards.nth(0).getByRole('heading',{name:'Anna Exempel',exact:true})).toBeVisible();await expect(cards.nth(0).getByRole('link',{name:'070-123 45 67',exact:true})).toHaveAttribute('href','tel:0701234567');await expect(cards.nth(1)).toContainText('<img');await expect(cards.nth(1).locator('img')).toHaveCount(0);await expect(page.locator('a[href^="mailto:"]')).toHaveCount(2);
+  const cards=page.locator('.h43-contact-card');await expect(cards).toHaveCount(2);await expect(cards.nth(0).getByRole('heading',{name:'Anna Exempel',exact:true})).toBeVisible();await expect(cards.nth(0).getByRole('link',{name:'070-123 45 67',exact:true})).toHaveAttribute('href','tel:0701234567');await expect(cards.nth(1)).toContainText('<img');await expect(cards.nth(1).locator('img')).toHaveCount(0);await expect(page.getByRole('tabpanel',{name:'Kontakt',exact:true}).locator('a[href^="mailto:"]')).toHaveCount(2);
   await page.screenshot({path:testInfo.outputPath('named-contacts-desktop.png'),fullPage:true});await page.setViewportSize({width:320,height:844});await page.screenshot({path:testInfo.outputPath('named-contacts-mobile.png'),fullPage:true});expect(await page.locator('.h43-ui').evaluate(node=>node.scrollWidth<=node.clientWidth)).toBe(true);
 });
 test('squad groups players and coaches while contact has one email and telephone action',async({page})=>{
@@ -125,7 +135,7 @@ test('multiple teams and delayed insertion remain isolated and initialization is
   const requests=[];await page.route(api+'**',route=>{const id=route.request().url().split('/').pop();requests.push(id);return route.fulfill({json:fixture(id),headers:{'Access-Control-Allow-Origin':'*'}});});
   await open(page);await page.evaluate(()=>{const div=document.createElement('div');div.dataset.h43TeamPage='';div.dataset.teamId='f12';document.body.append(div);});
   await expect(page.getByRole('heading',{name:'H43 Lund F2014'})).toBeVisible();
-  await page.addScriptTag({url:'/team-assets/v1.24.0/team-page.js'});
+  await page.addScriptTag({url:'/team-assets/v1.25.0/team-page.js'});
   expect(requests).toEqual(['p11','f12']);await expect(page.getByRole('heading',{level:1})).toHaveCount(2);
 });
 test('invalid team identifier never becomes an API request',async({page})=>{
@@ -213,7 +223,7 @@ test('real staging API integration and screenshot',async({page,request},testInfo
 test('published Webnode shared host with new release substituted only in this browser',async({page},testInfo)=>{
   test.skip(process.env.H43_WEBNODE_CHECK!=='1','Explicit published-host check');
   await page.route('https://www.h43lund.se/lagsida/**',async route=>{
-    const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace(/\/team-assets\/v\d+\.\d+\.\d+\//g,'/team-assets/v1.24.0/')});
+    const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace(/\/team-assets\/v\d+\.\d+\.\d+\//g,'/team-assets/v1.25.0/')});
   });
   await page.goto('https://www.h43lund.se/lagsida/?team=f2014');const root=page.locator('#h43-team-page');await expect(root.getByRole('heading',{level:1})).toHaveText('H43 Lund F2014');
   await expect(root.getByRole('tab',{name:'Översikt',selected:true})).toBeVisible();

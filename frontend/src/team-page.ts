@@ -192,7 +192,12 @@ function render(team:Team,uid:string,selected:TabId,onSelect:(id:TabId)=>void,ma
     event.preventDefault();activate('contact');contact.focus({preventScroll:true});contact.scrollIntoView({block:'start'});
   });
   const content=el('div','h43-content',...panels.map(panel=>panel.node));
-  const footer=el('footer','h43-footer',el('span','','H43 LUND HF'),el('span','','Trupp från SportAdmin · Tider i svensk tid'));
+  const portal=new URL(config.apiBaseUrl,location.href);portal.hostname=portal.hostname.replace(/^h43-youth-api-/,'h43-youth-admin-');portal.pathname='/';portal.search='';portal.hash='';
+  portal.searchParams.set('team',Object.entries(config.teamAliases).find(([,id])=>id===team.id)?.[0]||team.id);
+  const edit=link('Ledare – redigera lagsidan',portal.href,'h43-editor-link');
+  const requestAccess=link('Kontakta Elvir','mailto:elvir.arslanovic@gmail.com?subject='+encodeURIComponent(`Behörighet till ${teamName}`),'h43-access-link');
+  const leaders=el('div','h43-leader-access',edit,el('p','','Saknar du behörighet? ',requestAccess,'.'));
+  const footer=el('footer','h43-footer',el('div','h43-footer-info',el('span','','H43 LUND HF'),el('span','','Trupp från SportAdmin · Tider i svensk tid')),leaders);
   ui.append(hero,nav,content,footer);return ui;
 }
 function selectedTeam(host:HTMLElement):string{

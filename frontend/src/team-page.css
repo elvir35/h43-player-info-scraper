@@ -83,6 +83,7 @@
 @media(max-width:600px){.h43-follow{flex-direction:column;align-items:stretch;padding:20px;gap:16px}.h43-social{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}.h43-social-link{width:100%}}
 .h43-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#e5edf3;padding:20px 28px;color:#4d6479;font-size:11px}
 .h43-footer span:first-child{font-weight:800;letter-spacing:.12em}
+.h43-footer-info{display:grid;gap:5px}.h43-leader-access{text-align:right;font-size:13px}.h43-editor-link{display:inline-flex;align-items:center;min-height:44px;font-weight:700;color:#075da7!important;text-underline-offset:3px}.h43-leader-access p{font-size:12px;line-height:1.5}.h43-access-link{text-underline-offset:3px}@media(max-width:600px){.h43-leader-access{width:100%;text-align:left}}
 .h43-state{padding:36px;min-height:200px}.h43-state h2{font-size:22px}.h43-state p{font-size:15px}.h43-state button{margin-top:12px}
 @media(min-width:800px){.h43-content{padding:40px 40px 42px}.h43-section{padding:30px}.h43-names{grid-template-columns:repeat(4,minmax(0,1fr))}.h43-coaches{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.h43-hero{padding:20px 22px}.h43-hero-inner{flex-direction:column;align-items:flex-start;gap:16px}.h43-ui h1{font-size:27px}.h43-nav{justify-content:flex-start}.h43-tab{flex:1 0 auto;padding:16px 11px;font-size:12px}}
