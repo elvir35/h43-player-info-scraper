@@ -24,35 +24,6 @@ function section(title:string,id:string,eyebrow:string):HTMLElement{
   const s=el('section','h43-section',el('p','h43-eyebrow',eyebrow),el('h2','',title));s.id=id;return s;
 }
 function message(text:string):HTMLElement{return el('p','h43-muted',text);}
-function noPlayerPhoto():HTMLSpanElement{
-  const slot=el('span','h43-player-photo h43-photo-placeholder');slot.setAttribute('role','img');slot.setAttribute('aria-label','Bild saknas');
-  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  for(const [key,value]of Object.entries({viewBox:'0 0 24 24',width:'28',height:'28',fill:'none',stroke:'currentColor','stroke-width':'1.6','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))svg.setAttribute(key,value);
-  const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d','M4 4h16v16H4zM4 16l5-5 4 4 3-3 4 4M3 3l18 18');svg.append(path);slot.append(svg);return slot;
-}
-function enlargePlayerPhoto(url:string,name:string,trigger:HTMLButtonElement){
-  const dialog=el('dialog','h43-photo-dialog');dialog.setAttribute('aria-label',`Spelarbild: ${name}`);
-  const close=el('button','h43-photo-close','Stäng ×');close.type='button';close.setAttribute('aria-label','Stäng bild');close.autofocus=true;
-  const image=el('img','h43-photo-enlarged');image.src=url;image.alt=`Foto på ${name}`;image.decoding='async';image.referrerPolicy='no-referrer';
-  const media=el('div','h43-photo-media',image);
-  image.addEventListener('error',()=>media.replaceChildren(noPlayerPhoto(),message('Bilden kan inte visas just nu.')),{once:true});
-  dialog.append(el('div','h43-photo-heading',el('h2','',name),close),media);
-  close.addEventListener('click',()=>dialog.close());
-  dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();});
-  dialog.addEventListener('close',()=>{dialog.remove();if(trigger.isConnected)trigger.focus({preventScroll:true});},{once:true});
-  trigger.closest('.h43-ui')!.append(dialog);dialog.showModal();close.focus({preventScroll:true});
-}
-function people(names:Team['roster']['players'],cls='h43-names'):HTMLUListElement{
-  return el('ul',cls,...names.map(p=>{
-    const detail=cls==='h43-coaches'?p.responsibility:[p.shirtNumber?`#${p.shirtNumber}`:null,p.position].filter(Boolean).join(' · ');
-    const item=el('li','',el('div','h43-person-info',el('span','h43-person-name',p.displayName),detail?el('span','h43-person-detail',detail):null));
-    const privateImage=config.credentials==='same-origin'&&/^\/api\/admin\/v1\/teams\/[a-z0-9-]+\/images\/[a-f0-9-]{36}$/.test(p.imageUrl||'');
-    const url=cls==='h43-names'?(httpsUrl(p.imageUrl??null)||(privateImage?p.imageUrl:null)):null;
-    if(url){const img=el('img','h43-player-photo');img.src=url;img.alt=`Foto på ${p.displayName}`;img.width=72;img.height=72;img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';const trigger=el('button','h43-player-photo-trigger',img);trigger.type='button';trigger.setAttribute('aria-label',`Visa större bild av ${p.displayName}`);trigger.setAttribute('aria-haspopup','dialog');trigger.addEventListener('click',()=>enlargePlayerPhoto(url,p.displayName,trigger));img.addEventListener('error',()=>trigger.replaceWith(noPlayerPhoto()),{once:true});item.classList.add('h43-player-with-photo');item.prepend(trigger);}
-    else if(cls==='h43-names'){item.classList.add('h43-player-with-photo');item.prepend(noPlayerPhoto());}
-    return item;
-  }));
-}
 const matchDateFormat=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Stockholm',weekday:'short',day:'numeric',month:'short'});
 function matchIcon(kind:'clock'|'pin'):SVGSVGElement{
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -97,7 +68,7 @@ function matchCard(m:Team['upcomingMatches'][number]|Team['playedMatches'][numbe
   return el('li',`h43-fixture${next?' h43-next-fixture':''}`,top,next?el('div','h43-match-main',dateBlock,body):body);
 }
 type MatchFilter='upcoming'|'played';
-type TabId='overview'|'match'|'calendar'|'players'|'contact';
+type TabId='overview'|'match'|'calendar'|'contact';
 function render(team:Team,uid:string,selected:TabId,onSelect:(id:TabId)=>void,matchFilter:MatchFilter,onMatchFilter:(id:MatchFilter)=>void):HTMLElement{
   const teamName=Object.hasOwn(config.teamLabels,team.id)?config.teamLabels[team.id]:team.name;
   const ui=el('article','h43-ui');ui.dataset.h43Ui='';ui.lang='sv';ui.setAttribute('aria-label',teamName);
@@ -115,7 +86,7 @@ function render(team:Team,uid:string,selected:TabId,onSelect:(id:TabId)=>void,ma
   if(photo){const figure=el('figure','h43-team-photo'),image=el('img','h43-team-image');image.alt=team.welcome.heroAlt||`Lagbild för ${teamName}`;image.referrerPolicy='no-referrer';image.decoding='async';image.addEventListener('error',()=>figure.remove());image.src=photo;figure.append(image);welcome.append(figure);}
   const socials=el('div','h43-social');for(const platform of ['instagram','tiktok'] as const){const url=socialUrl(team.social[platform],platform);if(url){const label=team.social[platform==='instagram'?'instagramLabel':'tiktokLabel'];const a=link((label||(platform==='instagram'?'Instagram':'TikTok'))+' ↗',url,'h43-social-link');a.target='_blank';a.rel='noopener noreferrer';socials.append(a);}}
   if(socials.childElementCount){const follow=el('aside','h43-follow',el('div','h43-follow-copy',el('h3','','Följ laget'),el('p','','Häng med oss på sociala medier.')),socials);follow.setAttribute('aria-label','Lagets sociala medier');welcome.append(follow);}
-  welcome.append(formattedText(team.welcome.description||'Här hittar du lagets matcher, aktiviteter och trupp. Välj en flik ovan för att följa laget genom handbollssäsongen!','h43-description h43-formatted'));
+  welcome.append(formattedText(team.welcome.description||'Här hittar du lagets matcher och aktiviteter. Välj en flik ovan för att följa laget genom handbollssäsongen!','h43-description h43-formatted'));
   if(team.welcome.seasonMessage)welcome.append(el('aside','h43-editorial-note',el('h3','','Aktuellt i laget'),formattedText(team.welcome.seasonMessage,'h43-formatted')));
   const match=section('Kommande matcher',`${uid}-match`,'LAGETS MATCHER');match.classList.add('h43-match');
   const filters=el('div','h43-match-filters');filters.setAttribute('role','group');filters.setAttribute('aria-label','Matchfilter');
@@ -146,14 +117,6 @@ function render(team:Team,uid:string,selected:TabId,onSelect:(id:TabId)=>void,ma
     list.append(el('li','h43-event',details));}calendar.append(list);
   }else calendar.append(message(team.dataStatus.calendar==='unavailable'?'Kalendern kan inte hämtas just nu.':'Inga kommande aktiviteter att visa just nu.'));
   calendar.append(link('Hela H43:s kalender ↗',config.clubCalendarUrl));
-  const roster=section('Truppen',`${uid}-players`,'VÅRT LAG');roster.append(el('h3','h43-roster-heading','Spelare'));
-  const visible=['available','stale'].includes(team.dataStatus.roster);
-  if(visible&&team.roster.players.length)roster.append(people(team.roster.players));
-  else roster.append(message(team.dataStatus.roster==='empty'?'Inga spelare att visa just nu.':'Spelarlistan är inte tillgänglig just nu.'));
-  if(team.dataStatus.roster==='stale')roster.append(message('Visar senast hämtade trupp. Uppdateringen är tillfälligt fördröjd.'));
-  roster.append(el('h3','h43-roster-heading','Ledare'));
-  if(visible&&team.roster.coaches.length)roster.append(people(team.roster.coaches,'h43-coaches'));
-  else roster.append(message(team.dataStatus.roster==='empty'?'Inga ledare att visa just nu.':'Ledarinformation är inte tillgänglig just nu.'));
   const contact=section('Kontakt',`${uid}-contact`,'VI SES I HALLEN');
 
   if(team.contact.text)contact.append(formattedText(team.contact.text,'h43-editorial-note h43-formatted'));
@@ -167,7 +130,7 @@ function render(team:Team,uid:string,selected:TabId,onSelect:(id:TabId)=>void,ma
   else contact.append(message('Lagets kontaktuppgifter är inte publicerade. Kontakta klubben för hjälp.'),link('Kontakta H43 Lund ↗',config.clubContactUrl,'h43-button h43-button-blue'));
   const panels:{id:TabId;label:string;node:HTMLElement;button:HTMLButtonElement}[]=[
     {id:'overview',label:'Översikt',node:welcome},{id:'match',label:'Matcher',node:match},
-    {id:'calendar',label:'Kalender',node:calendar},{id:'players',label:'Truppen',node:roster},
+    {id:'calendar',label:'Kalender',node:calendar},
     {id:'contact',label:'Kontakt',node:contact}
   ].map(panel=>({...panel,button:el('button','h43-tab',panel.label)} as typeof panels[number]));
   const activate=(id:TabId,focus=false)=>{
@@ -197,7 +160,7 @@ function render(team:Team,uid:string,selected:TabId,onSelect:(id:TabId)=>void,ma
   const edit=link('Ledare – redigera lagsidan',portal.href,'h43-editor-link');
   const requestAccess=link('Kontakta Elvir','mailto:elvir.arslanovic@gmail.com?subject='+encodeURIComponent(`Behörighet till ${teamName}`),'h43-access-link');
   const leaders=el('div','h43-leader-access',edit,el('p','','Saknar du behörighet? ',requestAccess,'.'));
-  const footer=el('footer','h43-footer',el('div','h43-footer-info',el('span','','H43 LUND HF'),el('span','','Trupp från SportAdmin · Tider i svensk tid')),leaders);
+  const footer=el('footer','h43-footer',el('div','h43-footer-info',el('span','','H43 LUND HF'),el('span','','Matcher och kalender · Tider i svensk tid')),leaders);
   ui.append(hero,nav,content,footer);return ui;
 }
 function selectedTeam(host:HTMLElement):string{

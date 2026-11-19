@@ -18,7 +18,7 @@ before(async()=>{
   options.workers.push({...options.workers[0],name:'admin-text',r2Buckets:undefined,bindings:{...options.workers[0].bindings,IMAGE_UPLOADS_ENABLED:'false'}});
   mf=new Miniflare(options);
   db=await mf.getD1Database('DB','admin');publicWorker=await mf.getWorker('public');
-  for(const file of ['0001_teams_and_snapshots.sql','0002_p11_configuration.sql','0003_current_team_mode.sql','0004_coach_editorial.sql','0005_image_content_type.sql']){
+  for(const file of ['0001_teams_and_snapshots.sql','0002_p11_configuration.sql','0003_current_team_mode.sql','0004_coach_editorial.sql','0005_image_content_type.sql','0006_retire_youth_roster.sql']){
     const sql=await readFile(new URL('../migrations/'+file,import.meta.url),'utf8');for(const statement of sql.split(';').filter(s=>s.trim()))await db.prepare(statement).run();
   }
 });
@@ -32,7 +32,7 @@ const path=(action='content',team='p11')=>`/api/admin/v1/teams/${team}/${action}
 async function value(action='content',team='p11',user='coach'){const r=await req(path(action,team),'GET',undefined,user);assert.equal(r.status,200,await r.clone().text());return r.json();}
 async function publicValue(){const response=await publicWorker.fetch('https://public.test/api/v1/teams/p11');assert.equal(response.status,200);return response.json();}
 beforeEach(async()=>{
-  for(const table of ['admin_audit','team_content_state','team_content_revisions','team_images','admin_team_assignments','admin_users','roster_sync_status','team_roster_snapshots','team_seasons','teams'])await db.prepare('DELETE FROM '+table).run();
+  for(const table of ['retired_roster_images','admin_audit','team_content_state','team_content_revisions','team_images','admin_team_assignments','admin_users','roster_sync_status','team_roster_snapshots','team_seasons','teams'])await db.prepare('DELETE FROM '+table).run();
   for(const id of ['p11','p12']){
     await db.prepare('INSERT INTO teams(id,name,sportadmin_team_name,group_id,current_season) VALUES(?1,?2,?2,?3,?)').bind(id,id.toUpperCase(),id==='p11'?'378673':'999','current').run();
     await db.prepare("INSERT INTO team_seasons(team_id,season,starts_on,ends_on,publication_authorized) VALUES(?1,'current','','',1)").bind(id).run();
@@ -239,54 +239,44 @@ async function rosterFixture(){
   await db.prepare(sql).bind('p11',new Date().toISOString(),Date.now()*1000,JSON.stringify([{name:'Testspelare',sourceId:'100',memberKey:player}]),JSON.stringify([{name:'Testledare',sourceId:'200',memberKey:leader}]),'378673').run();
   await db.prepare(sql).bind('p12',new Date().toISOString(),Date.now()*1000,JSON.stringify([{name:'Other',sourceId:'100',memberKey:other}]),'[]','999').run();return {player,leader,other};
 }
-test('roster details stay in drafts until publication, never expose keys, and disappear with membership',async()=>{
-  const ids=await rosterFixture(),details=[{memberKey:ids.player,shirtNumber:'01',position:'Målvakt',responsibility:null},{memberKey:ids.leader,shirtNumber:null,position:null,responsibility:'Lagadministratör'}];
-  const body={...initial(),rosterDetails:details};assert.equal((await req(path('draft'),'PUT',{expectedVersion:0,content:body})).status,200);
-  assert.equal((await publicValue()).roster.players[0].shirtNumber,undefined);
-  const preview=await (await req('/api/admin/v1/preview/teams/p11')).json();assert.equal(preview.roster.players[0].shirtNumber,'01');assert.equal(preview.roster.coaches[0].responsibility,'Lagadministratör');
-  assert.equal((await req(path('publish'),'POST',{expectedVersion:1,expectedPublishedId:null})).status,200);
-  let pub=await publicValue();assert.deepEqual(pub.roster.players,[{displayName:'Testspelare',shirtNumber:'01',position:'Målvakt'}]);assert.ok(!JSON.stringify(pub).includes(ids.player));assert.ok(!JSON.stringify(pub).includes('sourceId'));
-  assert.equal((await req(path('draft'),'PUT',{expectedVersion:2,content:initial()})).status,422);
-  await db.prepare("UPDATE team_roster_snapshots SET players_json='[]' WHERE team_id='p11'").run();assert.deepEqual((await publicValue()).roster.players,[]);
-  await db.prepare("UPDATE team_roster_snapshots SET players_json=? WHERE team_id='p11'").bind(JSON.stringify([{name:'Testspelare',sourceId:'100',memberKey:crypto.randomUUID()}])).run();assert.equal((await publicValue()).roster.players[0].shirtNumber,undefined);
-  assert.equal((await req(path('draft'),'PUT',{expectedVersion:2,content:{...body,rosterDetails:[]}})).status,200);assert.equal((await req(path('publish'),'POST',{expectedVersion:3,expectedPublishedId:(await value()).published.id})).status,200);assert.equal((await publicValue()).roster.coaches[0].responsibility,undefined);
-});
-test('roster details reject cross-team, random identities, role confusion and invalid values',async()=>{
-  const ids=await rosterFixture();const good={memberKey:ids.player,shirtNumber:'9',position:null,responsibility:null};
-  for(const detail of [{...good,memberKey:ids.other},{...good,memberKey:crypto.randomUUID()},{...good,responsibility:'Admin'},{...good,shirtNumber:'1000'},{...good,shirtNumber:'<b>'},{...good,position:'<script>x</script>'},{...good,position:'x'.repeat(61)},{...good,memberKey:ids.leader}])assert.equal((await req(path('draft'),'PUT',{expectedVersion:0,content:{...initial(),rosterDetails:[detail]}})).status,422);
-  assert.equal((await req(path('draft'),'PUT',{expectedVersion:0,content:{...initial(),rosterDetails:[good,good]}})).status,422);
-  assert.equal((await req(path('draft','p12'),'PUT',{expectedVersion:0,content:{...initial(),rosterDetails:[good]}})).status,403);
-});
 
 const portraitSave=(version,details,headers={'X-H43-Roster-Images':'1'})=>req(path('draft'),'PUT',{expectedVersion:version,content:{...initial(),rosterDetails:details}},'coach',headers);
 const detailPhoto=(memberKey,imageId)=>({memberKey,imageId,shirtNumber:null,position:null,responsibility:null});
 async function uploadPortrait(){const r=await req(path('images'),'POST',photo(),'coach',{'Content-Type':'image/jpeg'});assert.equal(r.status,200);return (await r.json()).id;}
-test('player portraits remain private until published and stop serving when membership is removed',async()=>{
-  const ids=await rosterFixture(),imageId=await uploadPortrait();assert.equal((await portraitSave(0,[detailPhoto(ids.player,imageId)])).status,200);
-  const privatePreview=await (await req('/api/admin/v1/preview/teams/p11')).json();assert.equal(privatePreview.roster.players[0].imageUrl,`/api/admin/v1/teams/p11/images/${imageId}`);assert.equal((await publicValue()).roster.players[0].imageUrl,undefined);
-  const publicUrl=`https://public.test/api/v1/teams/p11/images/${imageId}`;assert.equal((await publicWorker.fetch(publicUrl)).status,404);
-  assert.equal((await req(path('publish'),'POST',{expectedVersion:1,expectedPublishedId:null})).status,200);assert.equal((await publicValue()).roster.players[0].imageUrl,publicUrl);assert.equal((await publicWorker.fetch(publicUrl)).status,200);
-  await db.prepare("UPDATE team_seasons SET publication_authorized=0 WHERE team_id='p11'").run();assert.equal((await publicWorker.fetch(publicUrl)).status,404);await db.prepare("UPDATE team_seasons SET publication_authorized=1 WHERE team_id='p11'").run();
-  await db.prepare("UPDATE team_roster_snapshots SET players_json='[]' WHERE team_id='p11'").run();assert.equal((await publicWorker.fetch(publicUrl)).status,404);assert.deepEqual((await publicValue()).roster.players,[]);
-  await db.prepare("UPDATE team_roster_snapshots SET players_json=? WHERE team_id='p11'").bind(JSON.stringify([{name:'Testspelare',sourceId:'100',memberKey:crypto.randomUUID()}])).run();assert.equal((await publicWorker.fetch(publicUrl)).status,404);assert.equal((await publicValue()).roster.players[0].imageUrl,undefined);
-});
-test('portrait replacement and removal publish atomically; old clients cannot erase photos silently',async()=>{
-  const ids=await rosterFixture(),a=await uploadPortrait(),b=await uploadPortrait(),url=id=>`https://public.test/api/v1/teams/p11/images/${id}`;
-  await portraitSave(0,[detailPhoto(ids.player,a)]);await req(path('publish'),'POST',{expectedVersion:1,expectedPublishedId:null});
-  assert.equal((await portraitSave(2,[],{})).status,422);assert.equal((await portraitSave(2,[detailPhoto(ids.player,b)])).status,200);assert.equal((await publicWorker.fetch(url(a))).status,200);assert.equal((await publicWorker.fetch(url(b))).status,404);
-  await req(path('publish'),'POST',{expectedVersion:3,expectedPublishedId:(await value()).published.id});assert.equal((await publicWorker.fetch(url(a))).status,404);assert.equal((await publicWorker.fetch(url(b))).status,200);
-  assert.equal((await portraitSave(4,[])).status,200);await req(path('publish'),'POST',{expectedVersion:5,expectedPublishedId:(await value()).published.id});assert.equal((await publicWorker.fetch(url(b))).status,404);
-});
-test('portrait references reject foreign/unready/deleting images and leader attachments',async()=>{
-  const ids=await rosterFixture(),imageId=await uploadPortrait();assert.equal((await portraitSave(0,[detailPhoto(ids.leader,imageId)])).status,422);
-  assert.equal((await portraitSave(0,[detailPhoto(ids.player,crypto.randomUUID())])).status,409);
-  await db.prepare("UPDATE team_images SET team_id='p12' WHERE id=?").bind(imageId).run();assert.equal((await portraitSave(0,[detailPhoto(ids.player,imageId)])).status,409);
-  await db.prepare("UPDATE team_images SET team_id='p11',state='deleting' WHERE id=?").bind(imageId).run();assert.equal((await portraitSave(0,[detailPhoto(ids.player,imageId)])).status,409);
+
+test('retired roster is absent from editor and preview; legacy clients cannot save roster details',async()=>{
+  const ids=await rosterFixture();
+  const state=await value();assert.deepEqual(state.roster,{players:[],coaches:[],lastSyncedAt:null});
+  const preview=await (await req('/api/admin/v1/preview/teams/p11')).json();assert.deepEqual(preview.roster,{players:[],coaches:[],lastSyncedAt:null});
+  const result=await portraitSave(0,[detailPhoto(ids.player,crypto.randomUUID())]);assert.equal(result.status,410);
   assert.equal((await value()).draft.version,0);
 });
-test('cleanup retains portrait draft/history references and publication rejects a claimed image',async()=>{
-  const ids=await rosterFixture(),imageId=await uploadPortrait();await portraitSave(0,[detailPhoto(ids.player,imageId)]);await db.prepare("UPDATE team_images SET created_at='2000-01-01T00:00:00Z'").run();
-  await cleanup({DB:db,IMAGES:await mf.getR2Bucket('IMAGES','admin')});assert.equal((await req(path('images/'+imageId))).status,200);
-  await req(path('publish'),'POST',{expectedVersion:1,expectedPublishedId:null});await portraitSave(2,[]);await cleanup({DB:db,IMAGES:await mf.getR2Bucket('IMAGES','admin')});assert.equal((await req(path('images/'+imageId))).status,200);
-  await portraitSave(3,[detailPhoto(ids.player,imageId)]);await db.prepare("UPDATE team_images SET state='deleting' WHERE id=?").bind(imageId).run();assert.equal((await req(path('publish'),'POST',{expectedVersion:4,expectedPublishedId:(await value()).published.id})).status,409);
+
+test('migration records draft and historical portraits; direct images stay blocked after rollback and reference removal',async()=>{
+  const ids=await rosterFixture(),portrait=await uploadPortrait(),draftPortrait=await uploadPortrait();
+  const legacy={...initial(),heroImageId:portrait,heroAlt:'Private player',rosterDetails:[detailPhoto(ids.player,portrait)]};
+  const revision=crypto.randomUUID();
+  await db.prepare("INSERT INTO team_content_revisions(id,team_id,season,content_json,published_by,published_at) VALUES(?,'p11','current',?,'coach@example.test',?)").bind(revision,JSON.stringify(legacy),new Date().toISOString()).run();
+  await db.prepare("UPDATE team_content_state SET published_revision_id=?,draft_json=? WHERE team_id='p11'").bind(revision,JSON.stringify({...legacy,rosterDetails:[detailPhoto(ids.player,draftPortrait)]})).run();
+  const migration=await readFile(new URL('../migrations/0006_retire_youth_roster.sql',import.meta.url),'utf8');
+  for(const statement of migration.split(';').filter(s=>s.trim()).slice(1))await db.prepare(statement).run();
+  const recorded=(await db.prepare('SELECT image_id FROM retired_roster_images ORDER BY image_id').all()).results.map(r=>r.image_id);
+  assert.deepEqual(recorded,[portrait,draftPortrait].sort());
+  const publicUrl=id=>`https://public.test/api/v1/teams/p11/images/${id}`;
+  assert.equal((await publicWorker.fetch(publicUrl(portrait))).status,404);assert.equal((await req(path('images/'+draftPortrait))).status,404);
+  const editor=await value();assert.deepEqual(editor.draft.content.rosterDetails,[]);assert.equal(editor.draft.content.heroImageId,null);assert.equal(editor.published.content.heroImageId,null);
+  const pub=await publicValue();assert.equal(pub.welcome.heroImageUrl,null);assert.equal(pub.welcome.heroAlt,null);assert.ok(!JSON.stringify(pub).includes('Private player'));
+  const restored=await req(path('rollback'),'POST',{expectedVersion:0,expectedPublishedId:revision,revisionId:revision});assert.equal(restored.status,200);
+  assert.equal((await value()).draft.content.heroImageId,null);assert.deepEqual((await value()).draft.content.rosterDetails,[]);
+  await db.prepare("DELETE FROM team_content_revisions WHERE id<> (SELECT published_revision_id FROM team_content_state WHERE team_id='p11')").run();
+  for(const id of recorded)assert.equal((await publicWorker.fetch(publicUrl(id))).status,404);
+  assert.equal((await req(path('draft'),'PUT',{expectedVersion:1,content:{...initial(),heroImageId:portrait}})).status,422);
+});
+
+test('roster retirement preserves named contacts, team image upload and publication',async()=>{
+  await rosterFixture();const imageId=await uploadPortrait();
+  const c={...initial(),heroImageId:imageId,contactEmail:'contact@example.test',contacts:[{name:'Kontaktperson',email:'contact@example.test',phone:null}]};
+  assert.equal((await req(path('draft'),'PUT',{expectedVersion:0,content:c})).status,200);
+  assert.equal((await req(path('publish'),'POST',{expectedVersion:1,expectedPublishedId:null})).status,200);
+  const v=await publicValue();assert.deepEqual(v.contact.people,c.contacts);assert.equal((await publicWorker.fetch(v.welcome.heroImageUrl)).status,200);assert.deepEqual(v.roster.players,[]);
 });

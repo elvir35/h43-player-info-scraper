@@ -1,3 +1,7 @@
+# Ändring inför v1.26.0 — Truppen tas bort
+
+Truppfliken och redigering av spelarbild, tröjnummer, position och ledaruppgift tas bort. Lagsidan behåller välkomsttext, lagbild, matcher, kalender, sociala länkar och manuellt angivna kontaktpersoner. Välj Kontakt för namn, mejl och mobilnummer till personer som får publiceras. Lagbilder kräver fortfarande föreningens publiceringsrutiner. Ändringen är publicerad i produktionsportalen. Ladda om redigeringssidan för att få den nya versionen. Webnode behöver välja v1.26.0 för att även ta bort den tomma truppfliken visuellt; äldre truppinstruktioner nedan är historiska. Se [aktuell leveransstatus](roster-retirement.md).
+
 # H43 · Guide för lagadministration
 
 Portalen är byggd och testad lokalt. **Den är ännu inte öppnad i staging eller produktion.** Administratören meddelar rätt adress efter säkerhetskontroll och godkänd driftsättning. Du behöver inte tillgång till Webnode.

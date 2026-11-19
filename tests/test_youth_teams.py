@@ -85,12 +85,10 @@ def test_onboarding_refuses_production_or_shared_resources():
             target(bad)
 
 
-def test_batch_sync_requires_all_team_credentials_before_starting(monkeypatch, tmp_path, capsys):
-    module = load_script("sync_youth_teams")
-    path = registry(tmp_path, [TEAM])
-    monkeypatch.setattr("sys.argv", ["sync", "--manifest", str(path)])
-    monkeypatch.delenv("H43_INGEST_TOKENS_JSON", raising=False)
+@pytest.mark.parametrize("script", ["scrape_youth_roster", "sync_youth_roster", "sync_youth_teams"])
+def test_retired_entry_points_never_scrape_even_with_credentials(script, monkeypatch, capsys):
+    module = load_script(script)
+    monkeypatch.setenv("H43_INGEST_TOKENS_JSON", '{"p11":"synthetic"}')
     monkeypatch.setenv("H43_API_URL", "https://example.test")
-    monkeypatch.setattr(module, "synchronize", lambda *a, **kw: pytest.fail("must not start without credentials"))
-    assert module.main() == 1
-    assert "credentials" in capsys.readouterr().out
+    assert module.main() == 2
+    assert "retired" in capsys.readouterr().err

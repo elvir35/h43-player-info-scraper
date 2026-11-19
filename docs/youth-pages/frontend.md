@@ -1,3 +1,7 @@
+# Production v1.26.0 — roster removed, 2026-11-19
+
+The deployed release has four tabs (Översikt, Matcher, Kalender, Kontakt) and never renders roster data or player images, even from an older API. Existing immutable v1.25.0 and earlier assets are retained; Webnode must select v1.26.0 in both asset URLs after deployment. The reviewed snippet is `frontend/webnode-production-embed.html`. The staging API/widget is deployed. Production API/widget/editor deployment is complete. The user still needs to repin the Webnode HTML block. See [the production report](roster-retirement-production.md). See [retirement rollout and validation](roster-retirement.md); older roster descriptions below are historical.
+
 # Phase 4: reusable Webnode frontend
 
 Current update: production **v1.25.0** adds the [team-specific coach editor link and access-request contact](coach-access-link.md). Use the current [production embed](../../frontend/webnode-production-embed.html); the older delivery notes below are historical and are superseded by the current release and [production cutover record](production-cutover.md).

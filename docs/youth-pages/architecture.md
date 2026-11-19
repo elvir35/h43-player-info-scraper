@@ -1,3 +1,7 @@
+# Current decision — youth roster retired, 2026-11-19
+
+The user chose to remove the roster feature and stop youth roster scraping. [Roster retirement](roster-retirement.md) supersedes roster-related proposals and descriptions below. The deployed production public API returns empty compatibility roster fields, blocks retired ingestion and known portraits, and preserves matches/calendar/editorial contacts/team photos. The new widget removes Truppen and the portal removes roster tools. Historical records below are not current feature requirements; current deployment and data-retention status are recorded in [the production report](roster-retirement-production.md).
+
 # Youth team pages architecture
 
 ## Current staging extensions — 2026-11-13

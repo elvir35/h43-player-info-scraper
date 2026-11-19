@@ -16,6 +16,18 @@ async function mock(page,data=fixture()){
 async function open(page){await page.goto('/preview/p11/');await expect(page.getByRole('heading',{level:1})).toBeVisible();}
 async function tab(page,name){await page.getByRole('tab',{name,exact:true}).click();}
 
+for(const width of [320,390,1440])test(`retired roster is never displayed or fetched from legacy responses at ${width}px`,async({page},info)=>{
+  await page.setViewportSize({width,height:900});const data=fixture();
+  data.roster.players[0].imageUrl='https://example.test/private-player.jpg';let imageRequests=0;
+  await page.route('https://example.test/private-player.jpg',route=>{imageRequests++;return route.abort();});
+  await mock(page,data);await open(page);
+  await expect(page.getByRole('tab')).toHaveText(['Översikt','Matcher','Kalender','Kontakt']);
+  await expect(page.getByRole('tab',{name:'Truppen',exact:true})).toHaveCount(0);
+  for(const name of ['Översikt','Matcher','Kalender','Kontakt']){await tab(page,name);await expect(page.locator('.h43-ui')).not.toContainText('Testspelare');await expect(page.locator('.h43-ui')).not.toContainText('Testledare');}
+  expect(imageRequests).toBe(0);expect(await page.locator('.h43-ui').evaluate(n=>n.scrollWidth<=n.clientWidth)).toBe(true);
+  await tab(page,'Översikt');await page.screenshot({path:info.outputPath(`without-roster-${width}.png`),fullPage:true});
+});
+
 test('coach footer links to the selected team and provides an access-request email on mobile',async({page})=>{
   await page.setViewportSize({width:390,height:844});
   for(const [id,slug] of [['p11','p2015'],['f12','f2014'],['f14','f2012-2013']]){
@@ -29,11 +41,6 @@ test('named contact cards keep each persons email and phone grouped safely',asyn
   const data=fixture();data.contact={email:'first@example.test',phone:null,people:[{name:'Anna Exempel',email:'first@example.test',phone:'070-123 45 67'},{name:'<img src=x onerror=alert(1)>',email:'second@example.test',phone:null}]};await mock(page,data);await open(page);await tab(page,'Kontakt');
   const cards=page.locator('.h43-contact-card');await expect(cards).toHaveCount(2);await expect(cards.nth(0).getByRole('heading',{name:'Anna Exempel',exact:true})).toBeVisible();await expect(cards.nth(0).getByRole('link',{name:'070-123 45 67',exact:true})).toHaveAttribute('href','tel:0701234567');await expect(cards.nth(1)).toContainText('<img');await expect(cards.nth(1).locator('img')).toHaveCount(0);await expect(page.getByRole('tabpanel',{name:'Kontakt',exact:true}).locator('a[href^="mailto:"]')).toHaveCount(2);
   await page.screenshot({path:testInfo.outputPath('named-contacts-desktop.png'),fullPage:true});await page.setViewportSize({width:320,height:844});await page.screenshot({path:testInfo.outputPath('named-contacts-mobile.png'),fullPage:true});expect(await page.locator('.h43-ui').evaluate(node=>node.scrollWidth<=node.clientWidth)).toBe(true);
-});
-test('squad groups players and coaches while contact has one email and telephone action',async({page})=>{
-  const data=fixture();data.contact={email:'lag@example.test',phone:'+46 70 123 45 67',text:'Kontakta oss om träningen.'};await mock(page,data);await open(page);
-  await tab(page,'Truppen');const squad=page.getByRole('tabpanel',{name:'Truppen',exact:true});await expect(squad.getByRole('heading',{name:'Spelare',exact:true})).toBeVisible();await expect(squad.getByRole('heading',{name:'Ledare',exact:true})).toBeVisible();await expect(squad.locator('.h43-coaches')).toContainText('Testledare Öberg');
-  await tab(page,'Kontakt');const contact=page.getByRole('tabpanel',{name:'Kontakt',exact:true});await expect(contact.locator('.h43-coaches')).toHaveCount(0);await expect(contact.getByText('Testledare Öberg')).toHaveCount(0);await expect(contact.locator('a[href^="mailto:"]')).toHaveCount(1);await expect(contact.getByRole('link',{name:'+46 70 123 45 67',exact:true})).toHaveAttribute('href','tel:+46701234567');
 });
 test('contact works with phone only and rejects executable telephone values',async({page})=>{
   const data=fixture();data.contact={email:null,phone:'070-123 45 67'};await mock(page,data);await open(page);await tab(page,'Kontakt');await expect(page.getByRole('link',{name:'070-123 45 67',exact:true})).toHaveAttribute('href','tel:0701234567');await expect(page.getByRole('link',{name:'Kontakta H43 Lund ↗'})).toHaveCount(0);
@@ -65,48 +72,11 @@ test('editorial heading, season message and contacts render with safe formatting
   await tab(page,'Kontakt');await expect(page.getByRole('link',{name:'p11@example.test',exact:true})).toHaveAttribute('href','mailto:p11@example.test');await expect(page.locator('.h43-editorial-note strong')).toHaveText('Frågor?');
   await expect(page.locator('.h43-editorial-note img')).toHaveCount(0);await expect(page.locator('a[href^="javascript:"]')).toHaveCount(0);await expect(page.getByRole('tabpanel',{name:'Kontakt',exact:true}).locator('.h43-editorial-note')).toContainText('<img');
 });
-test('renders separate names, null editorial fields and eight events',async({page})=>{
-  await mock(page);await open(page);
-  await expect(page.locator('.h43-names')).toContainText('Testspelare Å Ä Ö');
-  await expect(page.locator('.h43-names')).not.toContainText('Testledare');
-  await expect(page.locator('.h43-coaches')).toContainText('Testledare Öberg');
-  await expect(page.locator('.h43-event')).toHaveCount(8);
-  await expect(page.locator('.h43-team-image')).toHaveCount(0);
-  await expect(page.locator('.h43-social')).toHaveCount(0);
-  await tab(page,'Kontakt');
-  await expect(page.getByRole('link',{name:'Kontakta H43 Lund ↗'})).toHaveAttribute('href','https://www.h43lund.se/kontakt/');
-  await expect(page.locator('.h43-ui img')).toHaveCount(0);
-  await expect(page.locator('.h43-season')).toHaveCount(0);
-  await tab(page,'Kalender');await expect(page.locator('.h43-events')).toBeVisible();
-  await expect(page.getByText('Status ej bekräftad',{exact:true})).toHaveCount(0);
-});
 test('Stockholm winter and summer time independent of browser timezone',async({page})=>{
   const data=fixture();data.upcomingEvents[0].startsAt='2026-07-15T12:30:00Z';
   await mock(page,data);await open(page);
   await expect(page.locator('.h43-match time').first()).toContainText('13:30');
   await expect(page.locator('.h43-event time').first()).toContainText('14:30');
-});
-test('empty and unavailable sections have distinct states',async({page})=>{
-  const data=fixture();data.nextMatch=null;data.upcomingMatches=[];data.upcomingEvents=[];data.roster.players=[];data.roster.coaches=[];data.dataStatus={roster:'empty',calendar:'empty',matches:'empty'};
-  await mock(page,data);await open(page);
-  await expect(page.locator('.h43-match')).toContainText('Ingen kommande match');
-  await tab(page,'Kalender');
-  await expect(page.getByText('Inga kommande aktiviteter att visa just nu.')).toBeVisible();
-  await tab(page,'Truppen');
-  await expect(page.getByText('Inga spelare att visa just nu.')).toBeVisible();
-  data.dataStatus={roster:'unavailable',calendar:'unavailable',matches:'unavailable'};await page.reload();
-  await tab(page,'Kalender');
-  await expect(page.getByText('Kalendern kan inte hämtas just nu.')).toBeVisible();
-});
-test('scraped and editorial HTML stays text; invalid links and images rejected',async({page})=>{
-  const data=fixture();const attack='<img src=x onerror="window.h43Xss=true">';
-  data.roster.players[0].displayName=attack;data.welcome.title=attack;data.welcome.description='<script>window.h43Xss=true</script>';
-  data.social={instagram:'javascript:alert(1)',tiktok:'https://tiktok.com.evil.test/@x'};data.welcome.heroImageUrl='javascript:alert(1)';data.contact.email='a@b.se?body=evil';
-  data.internalSecret='DO-NOT-RENDER';await mock(page,data);await open(page);
-  await expect(page.locator('.h43-names')).toContainText(attack);
-  await expect(page.locator('.h43-ui script,.h43-team-image,.h43-social')).toHaveCount(0);
-  expect(await page.evaluate(()=>window.h43Xss)).toBeUndefined();
-  await expect(page.locator('.h43-ui')).not.toContainText('DO-NOT-RENDER');
 });
 test('valid configured content, social links and contact render without embed scripts',async({page})=>{
   const data=fixture();data.welcome={title:'Välkommen till vårt testlag',description:'Rad ett\nRad två',heroImageUrl:'https://example.test/missing.jpg'};
@@ -126,7 +96,7 @@ for(const kind of ['malformed','mismatched','oversized','http','network'])test(`
     if(kind==='network')return route.abort();
     if(kind==='http')return route.fulfill({status:503,body:'Unavailable',headers:{'Access-Control-Allow-Origin':'*'}});
     if(kind==='oversized')return route.fulfill({contentType:'application/json',body:' '.repeat(256*1024+1),headers:{'Access-Control-Allow-Origin':'*'}});
-    const data=fixture();if(kind==='mismatched')data.id='other';else delete data.roster;
+    const data=fixture();if(kind==='mismatched')data.id='other';else delete data.welcome;
     return route.fulfill({json:data,headers:{'Access-Control-Allow-Origin':'*'}});
   });await page.goto('/preview/p11/');await expect(page.getByRole('alert')).toBeVisible();await expect(page.locator('.h43-names')).toHaveCount(0);
   await page.unroute(api+'**');await mock(page);await page.getByRole('button',{name:'Försök igen'}).click();await expect(page.getByRole('heading',{level:1})).toBeVisible();
@@ -135,7 +105,7 @@ test('multiple teams and delayed insertion remain isolated and initialization is
   const requests=[];await page.route(api+'**',route=>{const id=route.request().url().split('/').pop();requests.push(id);return route.fulfill({json:fixture(id),headers:{'Access-Control-Allow-Origin':'*'}});});
   await open(page);await page.evaluate(()=>{const div=document.createElement('div');div.dataset.h43TeamPage='';div.dataset.teamId='f12';document.body.append(div);});
   await expect(page.getByRole('heading',{name:'H43 Lund F2014'})).toBeVisible();
-  await page.addScriptTag({url:'/team-assets/v1.25.0/team-page.js'});
+  await page.addScriptTag({url:'/team-assets/v1.26.0/team-page.js'});
   expect(requests).toEqual(['p11','f12']);await expect(page.getByRole('heading',{level:1})).toHaveCount(2);
 });
 test('invalid team identifier never becomes an API request',async({page})=>{
@@ -144,15 +114,6 @@ test('invalid team identifier never becomes an API request',async({page})=>{
   await page.evaluate(()=>{const div=document.createElement('div');div.dataset.h43TeamPage='';div.dataset.teamId='../admin';document.body.append(div);});
   await expect(page.getByRole('alert')).toBeVisible();expect(invalidRequest).toBe(false);
 });
-test('refresh picks up removals and a subsequent outage clears the view',async({page})=>{
-  await page.clock.install();const data=fixture();let fail=false;
-  await page.route(api+'**',route=>fail?route.fulfill({status:503,headers:{'Access-Control-Allow-Origin':'*'}}):route.fulfill({json:data,headers:{'Access-Control-Allow-Origin':'*'}}));
-  await open(page);await expect(page.locator('.h43-names li')).toHaveCount(2);
-  await tab(page,'Truppen');
-  data.roster.players.pop();await page.clock.fastForward(300001);await expect(page.locator('.h43-names li')).toHaveCount(1);
-  await expect(page.getByRole('tab',{name:'Truppen',selected:true})).toBeFocused();await expect(page.locator('.h43-names')).toBeVisible();
-  fail=true;await page.clock.fastForward(300001);await expect(page.getByRole('alert')).toBeVisible();await expect(page.locator('.h43-names li')).toHaveCount(0);
-});
 test('Webnode-style global CSS does not affect widget or leak outward',async({page})=>{
   await mock(page);await open(page);
   const before=await page.getByRole('heading',{level:1}).evaluate(e=>getComputedStyle(e).fontSize);
@@ -160,7 +121,7 @@ test('Webnode-style global CSS does not affect widget or leak outward',async({pa
   const after=await page.getByRole('heading',{level:1}).evaluate(e=>getComputedStyle(e).fontSize);expect(after).toBe(before);
   await page.evaluate(()=>{const p=document.createElement('p');p.id='outside';p.textContent='Outside';document.body.append(p);});
   await expect(page.locator('#outside')).toHaveCSS('color','rgb(255, 0, 0)');
-  await tab(page,'Truppen');await expect(page.getByRole('heading',{name:'Truppen'})).toBeInViewport();
+  await tab(page,'Kontakt');await expect(page.getByRole('heading',{name:'Kontakt',exact:true})).toBeInViewport();
 });
 for(const width of [320,390,768,1440])test(`responsive layout at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:900});await mock(page);await open(page);
@@ -170,10 +131,10 @@ for(const width of [320,390,768,1440])test(`responsive layout at ${width}px`,asy
   await expect(page.locator('.h43-badge')).toHaveCount(0);
   expect(await page.locator('.h43-hero').evaluate(e=>e.getBoundingClientRect().height)).toBeLessThan(width<=600?205:155);
   await expect(page.locator('.h43-hero')).toHaveCSS('background-color','rgb(7, 45, 80)');
-  for(const name of ['Matcher','Kalender','Truppen','Kontakt','Översikt']){await tab(page,name);await expect(page.getByRole('tabpanel')).toHaveCount(1);}
+  for(const name of ['Matcher','Kalender','Kontakt','Översikt']){await tab(page,name);await expect(page.getByRole('tabpanel')).toHaveCount(1);}
 });
 test('tabs show one independent panel; matches and calendar do not mix',async({page})=>{
-  await mock(page);await open(page);await expect(page.getByRole('tab')).toHaveCount(5);
+  await mock(page);await open(page);await expect(page.getByRole('tab')).toHaveCount(4);
   await expect(page.getByRole('tabpanel')).toHaveCount(1);await expect(page.locator('.h43-match')).toBeHidden();
   await tab(page,'Matcher');await expect(page.locator('.h43-fixture')).toHaveCount(2);await expect(page.locator('.h43-opponent')).toBeVisible();
   await expect(page.getByRole('tabpanel')).not.toContainText('Testaktivitet');await expect(page.locator('.h43-events')).toBeHidden();
@@ -192,49 +153,8 @@ test('tab keyboard navigation, ARIA relationships and team isolation',async({pag
   expect(await first.getAttribute('aria-controls')).toBe(await panel.getAttribute('id'));
   await page.evaluate(()=>{const div=document.createElement('div');div.id='second';div.dataset.h43TeamPage='';div.dataset.teamId='p11';document.body.append(div);});
   await expect(page.locator('#second').getByRole('tab',{name:'Översikt',selected:true})).toBeVisible();
-  await page.locator('#h43-team-page').getByRole('tab',{name:'Truppen'}).click();
+  await page.locator('#h43-team-page').getByRole('tab',{name:'Kontakt'}).click();
   await expect(page.locator('#second').getByRole('tab',{name:'Översikt',selected:true})).toBeVisible();
-});
-test('real staging API integration and screenshot',async({page,request},testInfo)=>{
-  test.skip(process.env.H43_REAL_API!=='1','Explicit network integration check');
-  const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  page.on('console',message=>{if(message.type()==='error'&&/Content Security Policy|Refused to/i.test(message.text()))errors.push(message.text());});
-  const response=await request.get(api+'p11');expect(response.status()).toBe(200);const data=await response.json();
-  await open(page);await expect(page.locator('.h43-names li')).toHaveCount(data.roster.players.length);await expect(page.locator('.h43-coaches li')).toHaveCount(data.roster.coaches.length);
-  if(data.nextMatch)await expect(page.locator('.h43-opponent')).toHaveText(data.nextMatch.opponent||'Motståndare meddelas');
-  await expect(page.locator('.h43-event')).toHaveCount(Math.min(8,data.upcomingEvents.length));
-  await tab(page,'Truppen');await expect(page.getByRole('tabpanel',{name:'Truppen',exact:true}).locator('.h43-coaches li')).toHaveCount(data.roster.coaches.length);
-  await tab(page,'Kontakt');await expect(page.getByRole('tabpanel',{name:'Kontakt',exact:true}).locator('.h43-coaches')).toHaveCount(0);await expect(page.locator('a[href^="tel:"]')).toHaveCount(data.contact.people.filter(person=>person.phone).length);await tab(page,'Översikt');
-  await expect(page.locator('.h43-hero img')).toHaveCount(0);
-  if(data.welcome.heroImageUrl){await expect(page.locator('.h43-team-image')).toBeVisible();await expect(page.locator('.h43-team-image')).toHaveCSS('object-fit','contain');}
-  if(data.social.instagram||data.social.tiktok)await expect(page.getByRole('heading',{name:'Följ laget',exact:true})).toBeVisible();
-  await page.screenshot({path:testInfo.outputPath('p11-social-overview.png'),fullPage:false});
-  await tab(page,'Kontakt');await expect(page.getByRole('tabpanel',{name:'Kontakt'}).locator('a[href^="mailto:"]')).toHaveCount(data.contact.people.filter(person=>person.email).length);await tab(page,'Översikt');
-  expect(errors).toEqual([]);
-  await page.screenshot({path:testInfo.outputPath('p11-desktop.png'),fullPage:true});
-  await tab(page,'Matcher');await expect(page.locator('.h43-fixture')).toHaveCount(data.upcomingMatches?.length??(data.nextMatch?1:0));
-  await page.screenshot({path:testInfo.outputPath('p11-matches.png'),fullPage:true});
-  await page.getByRole('button',{name:'Spelade',exact:true}).click();await expect(page.locator('.h43-fixture')).toHaveCount(data.playedMatches.length);await expect(page.locator('.h43-next-fixture')).toHaveCount(0);await page.screenshot({path:testInfo.outputPath('p11-played-matches.png'),fullPage:true});
-  await tab(page,'Kalender');await expect(page.locator('.h43-events')).toBeVisible();
-  await page.screenshot({path:testInfo.outputPath('p11-calendar.png'),fullPage:true});
-  await tab(page,'Översikt');
-  await page.setViewportSize({width:390,height:844});await page.screenshot({path:testInfo.outputPath('p11-mobile.png'),fullPage:true});
-});
-test('published Webnode shared host with new release substituted only in this browser',async({page},testInfo)=>{
-  test.skip(process.env.H43_WEBNODE_CHECK!=='1','Explicit published-host check');
-  await page.route('https://www.h43lund.se/lagsida/**',async route=>{
-    const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace(/\/team-assets\/v\d+\.\d+\.\d+\//g,'/team-assets/v1.25.0/')});
-  });
-  await page.goto('https://www.h43lund.se/lagsida/?team=f2014');const root=page.locator('#h43-team-page');await expect(root.getByRole('heading',{level:1})).toHaveText('H43 Lund F2014');
-  await expect(root.getByRole('tab',{name:'Översikt',selected:true})).toBeVisible();
-  const cookies=page.getByRole('button',{name:'Acceptera endast nödvändiga',exact:true});if(await cookies.count())await cookies.click();
-  for(const name of ['Matcher','Kalender','Truppen','Kontakt']){
-    await root.getByRole('tab',{name,exact:true}).click();await expect(root.getByRole('tabpanel')).toHaveCount(1);
-  }
-  await page.setViewportSize({width:390,height:844});await root.getByRole('tab',{name:'Kalender'}).click();
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.screenshot({path:testInfo.outputPath('webnode-tabs-mobile.png'),fullPage:true});
-  await root.getByRole('tab',{name:'Kontakt',exact:true}).click();await expect(root.getByRole('tab',{name:'Kontakt',selected:true})).toBeVisible();
 });
 
 
@@ -262,18 +182,6 @@ test('youth directory links all eleven teams to the shared page and filters acce
   await page.getByRole('button',{name:'Alla',exact:true}).click();await expect(page.locator('.h43y__card:visible')).toHaveCount(11);
 });
 
-test('real shared staging page loads every onboarded team with its own roster',async({page,request},info)=>{
-  test.skip(process.env.H43_ALL_TEAMS!=='1','Explicit all-team staging check');test.setTimeout(180000);
-  const teams=JSON.parse(await readFile(new URL('../../config/youth-teams.json',import.meta.url),'utf8'));
-  const slugs=JSON.parse(await readFile(new URL('../../config/team-slugs.json',import.meta.url),'utf8'));
-  for(const team of teams){
-    const response=await request.get(api+team.id);expect(response.status()).toBe(200);const data=await response.json();expect(data.dataStatus.roster).toBe('available');
-    await page.goto(`/preview/shared/?team=${slugs[team.id]}`);await expect(page.getByRole('heading',{level:1})).toHaveText(birthYearLabels[team.id]);await tab(page,'Truppen');await expect(page.locator('.h43-names li')).toHaveCount(data.roster.players.length);await expect(page.locator('.h43-coaches li')).toHaveCount(data.roster.coaches.length);
-    await tab(page,'Matcher');expect(await page.locator('.h43-opponent,.h43-fixture-opponent').allTextContents()).toEqual(data.upcomingMatches.map(m=>m.opponent||'Motståndare meddelas'));expect(await page.locator('.h43-fixture .h43-tag').allTextContents()).toEqual(data.upcomingMatches.map(m=>m.homeAway==='home'?'Hemmamatch':m.homeAway==='away'?'Bortamatch':'Match'));
-    if(team.id==='f12'){await page.screenshot({path:info.outputPath('shared-f12-desktop.png'),fullPage:true});await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:info.outputPath('shared-f12-mobile.png'),fullPage:true});await page.setViewportSize({width:1440,height:1100});}
-  }
-});
-
 for(const width of [390,1440])test(`match cards keep chronological dates, accessible times and responsive layout at ${width}px`,async({page},info)=>{
   const data=fixture();data.upcomingMatches[1].homeAway='home';data.upcomingMatches[1].opponent='Långt testmotståndarnamn med Å Ä Ö';data.upcomingMatches.push({...data.nextMatch,id:'m3',startsAt:'2026-11-29T12:30:00Z',opponent:null,location:null,homeAway:'unknown',competition:null});
   await page.setViewportSize({width,height:1000});await mock(page,data);await open(page);await tab(page,'Matcher');
@@ -294,18 +202,6 @@ test('birth-year URLs resolve every cohort to its original team without changing
     await page.goto(`/preview/shared/?team=${slug}`);await expect(page.getByRole('heading',{level:1})).toHaveText(birthYearLabels[id]);await expect(page.locator('.h43-ui')).toHaveAttribute('aria-label',birthYearLabels[id]);expect(new URL(page.url()).searchParams.get('team')).toBe(slug);expect(requested.at(-1)).toBe(id);
   }
   await page.goto('/preview/p11/?team=f2014');await expect(page.getByRole('heading',{level:1})).toHaveText('H43 Lund P2015');expect(requested.at(-1)).toBe('p11');
-});
-
-for(const width of [320,390,600])test(`long roster names remain whole words on mobile at ${width}px`,async({page},info)=>{
-  await page.setViewportSize({width,height:900});
-  const data=fixture();data.roster.players=[{displayName:'Testperson Långström Svensson'},{displayName:'Testperson Alexandersson'},{displayName:'Testperson Söderberg Lindholm'}];
-  data.roster.coaches=[{displayName:'Testledare Alexandersson Österberg'}];
-  await mock(page,data);await open(page);await page.addStyleTag({content:'html,body,#h43-team-page{hyphens:auto;word-break:break-all}'});await tab(page,'Truppen');
-  const rows=page.locator('.h43-names li');await expect(rows).toHaveText(data.roster.players.map(p=>p.displayName));
-  const boxes=await rows.evaluateAll(nodes=>nodes.map(node=>{const rect=node.getBoundingClientRect();const text=node.querySelector('.h43-person-name').firstChild;const words=[...text.textContent.matchAll(/\S+/g)].map(word=>{const range=document.createRange();range.setStart(text,word.index);range.setEnd(text,word.index+word[0].length);return range.getClientRects().length;});return {left:rect.left,width:rect.width,words,overflow:node.scrollWidth>node.clientWidth,hyphens:getComputedStyle(node).hyphens};}));
-  for(const box of boxes){expect(box.left).toBe(boxes[0].left);expect(box.width).toBe(boxes[0].width);expect(box.overflow).toBe(false);expect(box.hyphens).toBe('none');expect(box.words.every(lines=>lines===1)).toBe(true);}
-  await expect(page.locator('.h43-coaches li')).toHaveCSS('hyphens','none');expect(await page.locator('.h43-ui').evaluate(node=>node.scrollWidth<=node.clientWidth)).toBe(true);
-  await page.screenshot({path:info.outputPath('mobile-roster.png'),fullPage:true});
 });
 
 for(const width of [390,1440])test(`upcoming and played match filters use separate cards at ${width}px`,async({page},info)=>{
@@ -334,43 +230,4 @@ test('played scoreboards assign home and away scores correctly and preserve unkn
   await expect(cards.nth(2).locator('.h43-scoreboard')).toHaveCount(0);await expect(cards.nth(2)).toContainText('Resultatet visas i ordningen hemmalag–bortalag.');await expect(cards.nth(2).locator('.h43-score-unknown')).toHaveText('21–19');
 });
 
-test('optional roster details render as text and do not change names or membership',async({page})=>{
-  const data=fixture();data.roster.players[0]={displayName:'Testspelare Å Ä Ö',shirtNumber:'01',position:'Målvakt'};data.roster.coaches[0]={displayName:'Testledare Öberg',responsibility:'Lagadministratör'};
-  await mock(page,data);await open(page);await tab(page,'Truppen');await expect(page.locator('.h43-person-detail')).toHaveText(['#01 · Målvakt','Lagadministratör']);await expect(page.locator('.h43-names li')).toHaveCount(2);
-});
-
-for(const width of [320,390,1440])test(`optional player photo is accessible and safe at ${width}px`,async({page},info)=>{
-  await page.setViewportSize({width,height:900});const data=fixture();data.roster.players[0].imageUrl='https://example.test/portrait.png';
-  await page.route('https://example.test/portrait.png',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="72" height="144"><rect width="72" height="144" fill="#075da7"/><rect width="72" height="16" fill="#efc460"/><rect y="128" width="72" height="16" fill="#efc460"/></svg>'}));await mock(page,data);await open(page);await tab(page,'Truppen');
-  await expect(page.getByRole('img',{name:'Foto på Testspelare Å Ä Ö',exact:true})).toBeVisible();await expect(page.locator('img.h43-player-photo')).toHaveCSS('object-fit','contain');await page.screenshot({path:info.outputPath('full-player-photo.png'),fullPage:true});await expect(page.locator('.h43-names li')).toHaveCount(2);expect(await page.locator('.h43-ui').evaluate(node=>node.scrollWidth<=node.clientWidth)).toBe(true);
-});
-test('failed portrait load falls back to the name and unsafe photo URLs are ignored',async({page})=>{
-  const data=fixture();data.roster.players[0].imageUrl='https://example.test/missing.png';data.roster.players[1].imageUrl='javascript:alert(1)';await page.route('https://example.test/missing.png',route=>route.fulfill({status:404}));await mock(page,data);await open(page);await tab(page,'Truppen');await expect(page.locator('img.h43-player-photo')).toHaveCount(0);await expect(page.locator('.h43-player-photo-trigger')).toHaveCount(0);await expect(page.getByRole('img',{name:'Bild saknas',exact:true})).toHaveCount(2);await expect(page.locator('.h43-person-name').first()).toHaveText('Testspelare Å Ä Ö');
-});
-
-for(const width of [320,390,1440])test(`players without photos keep names and no-image icons at ${width}px`,async({page},info)=>{
-  await page.setViewportSize({width,height:1000});await mock(page);await open(page);await tab(page,'Truppen');
-  await expect(page.getByRole('img',{name:'Bild saknas',exact:true})).toHaveCount(2);await expect(page.locator('.h43-names .h43-person-name')).toHaveText(['Testspelare Å Ä Ö','Testspelare Två']);await expect(page.locator('.h43-coaches .h43-photo-placeholder')).toHaveCount(0);expect(await page.locator('.h43-ui').evaluate(n=>n.scrollWidth<=n.clientWidth)).toBe(true);
-  await page.screenshot({path:info.outputPath('no-player-photo.png'),fullPage:true});
-});
-
 const portraitSvg='<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1440"><rect width="720" height="1440" fill="#075da7"/><rect width="720" height="160" fill="#efc460"/><rect y="1280" width="720" height="160" fill="#efc460"/></svg>';
-for(const width of [320,390,1440])test(`player photo dialog enlarges the whole image and supports keyboard dismissal at ${width}px`,async({page},info)=>{
-  await page.setViewportSize({width,height:900});const data=fixture();data.roster.players[0].imageUrl='https://example.test/enlarge.svg';
-  await page.route('https://example.test/enlarge.svg',route=>route.fulfill({contentType:'image/svg+xml',body:portraitSvg}));await mock(page,data);await open(page);await tab(page,'Truppen');
-  const trigger=page.getByRole('button',{name:'Visa större bild av Testspelare Å Ä Ö',exact:true});await trigger.focus();await page.keyboard.press('Enter');
-  const dialog=page.getByRole('dialog',{name:'Spelarbild: Testspelare Å Ä Ö',exact:true}),close=dialog.getByRole('button',{name:'Stäng bild',exact:true});await expect(dialog).toBeVisible();await expect(close).toBeFocused();
-  const image=dialog.getByRole('img',{name:'Foto på Testspelare Å Ä Ö',exact:true});await expect(image).toHaveCSS('object-fit','contain');await expect.poll(()=>image.evaluate(i=>i.complete&&i.naturalHeight===1440)).toBe(true);
-  const r=await dialog.boundingBox(),photo=await image.boundingBox();expect(r.x).toBeGreaterThanOrEqual(0);expect(r.x+r.width).toBeLessThanOrEqual(width);expect(r.y).toBeGreaterThanOrEqual(0);expect(r.y+r.height).toBeLessThanOrEqual(900);expect(photo.height).toBeGreaterThan(72);
-  await page.keyboard.press('Tab');await expect(trigger).not.toBeFocused();await page.keyboard.press('Shift+Tab');await expect(close).toBeFocused();
-  await image.click();await expect(dialog).toBeVisible();await page.screenshot({path:info.outputPath('enlarged-player-photo.png')});await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
-  await page.keyboard.press('Space');await expect(dialog).toBeVisible();await close.click();await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
-  await trigger.click();await expect(dialog).toBeVisible();await page.mouse.click(2,2);await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
-});
-test('player photo dialog reports revoked images safely and refresh removes an open portrait',async({page})=>{
-  await page.clock.install();const data=fixture();data.roster.players[0].imageUrl='https://example.test/revoked.svg';let images=0;
-  await page.route('https://example.test/revoked.svg',route=>++images===1?route.fulfill({contentType:'image/svg+xml',body:portraitSvg}):route.fulfill({status:404}));await mock(page,data);await open(page);await tab(page,'Truppen');
-  const trigger=page.getByRole('button',{name:'Visa större bild av Testspelare Å Ä Ö',exact:true});await expect.poll(()=>page.locator('img.h43-player-photo').evaluate(i=>i.complete&&i.naturalHeight>0)).toBe(true);await trigger.click();
-  const dialog=page.getByRole('dialog');await page.route('https://example.test/revoked.svg?removed=1',route=>route.fulfill({status:404}));await dialog.locator('img').evaluate(i=>{i.src='https://example.test/revoked.svg?removed=1';});await expect(dialog.getByText('Bilden kan inte visas just nu.',{exact:true})).toBeVisible();await expect(dialog.getByRole('heading',{name:'Testspelare Å Ä Ö',exact:true})).toBeVisible();
-  data.roster.players.splice(0,1);await page.clock.fastForward(300001);await expect(dialog).toHaveCount(0);await expect(page.locator('.h43-names li')).toHaveCount(1);await page.getByRole('tab',{name:'Kontakt',exact:true}).click();await expect(page.getByRole('tab',{name:'Kontakt',exact:true})).toHaveAttribute('aria-selected','true');
-});

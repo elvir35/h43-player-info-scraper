@@ -25,7 +25,7 @@ before(async()=>{
       return Response.json(request.url.includes("/matches")?matches:calendar);
     }});
   db=await mf.getD1Database("DB");
-  for(const file of ["0001_teams_and_snapshots.sql","0002_p11_configuration.sql","0003_current_team_mode.sql","0004_coach_editorial.sql"]){
+  for(const file of ["0001_teams_and_snapshots.sql","0002_p11_configuration.sql","0003_current_team_mode.sql","0004_coach_editorial.sql","0005_image_content_type.sql","0006_retire_youth_roster.sql"]){
     const sql=await readFile(new URL("../migrations/"+file,import.meta.url),"utf8");
     for(const statement of sql.split(";").filter(s=>s.trim())) await db.prepare(statement).run();
   }
@@ -33,7 +33,7 @@ before(async()=>{
 after(async()=>{await mf?.dispose();});
 beforeEach(async()=>{
   epoch++;calendar=[];matches=[];upstreamBad=false;sourceCalls=0;
-  await db.batch(["DELETE FROM team_content_state","DELETE FROM roster_sync_status","DELETE FROM team_roster_snapshots","DELETE FROM team_seasons","DELETE FROM teams"].map(s=>db.prepare(s)));
+  await db.batch(["DELETE FROM retired_roster_images","DELETE FROM team_content_state","DELETE FROM roster_sync_status","DELETE FROM team_roster_snapshots","DELETE FROM team_seasons","DELETE FROM teams"].map(s=>db.prepare(s)));
   for(const [id,name,group] of [["p11","P11","378673"],["other","Synthetic Other","999"]]){
     await db.prepare("INSERT INTO teams(id,name,sportadmin_team_name,group_id,current_season,cache_version) VALUES(?1,?2,?2,?3,?4,?5)").bind(id,name,group,season,epoch*100).run();
     await db.prepare("INSERT INTO team_seasons(team_id,season,starts_on,ends_on,publication_authorized,calendar_year,calendar_month) VALUES(?1,?2,?3,?4,1,?5,?6)")
@@ -71,139 +71,44 @@ test("migrations seed only verified P11 identity; no fabricated roster",async()=
   assert.equal((await db.prepare("SELECT count(*) AS n FROM team_roster_snapshots").first()).n,0);
   assert.equal((await publicValue()).roster.lastSyncedAt,null);
 });
-test("valid snapshot persists and public projection is explicit names-only",async()=>{
-  assert.equal((await put(snapshot())).status,200);
-  const r=await request();const value=await r.json();
-  assert.equal(r.status,200);assert.equal(r.headers.get("cache-control"),"no-store");
-  assert.equal(r.headers.get("x-content-type-options"),"nosniff");
-  assert.deepEqual(value.roster.players,[{displayName:"Åsa Öberg"}]);
-  assert.deepEqual(value.roster.coaches,[{displayName:"Coach Exempel"}]);
-  assert.deepEqual(Object.keys(value).sort(),["apiVersion","id","name","season","welcome","roster","nextMatch","upcomingMatches","playedMatches","upcomingEvents","social","contact","dataStatus","freshness"].sort());
-  const text=JSON.stringify(value);
-  for(const forbidden of ["378673","sportadmin_group_id","source_url","observed_us","players_json","attempted_us",token,hash,"sync_status"])assert.ok(!text.includes(forbidden),forbidden);
-  assert.deepEqual(value.welcome,{title:null,description:null,heroImageUrl:null,seasonMessage:null,heroAlt:null});
+
+test('retired ingestion and private roster reads reject even former valid credentials without accessing storage',async()=>{
+  for(const [action,method]of [['roster','GET'],['roster','PUT'],['failure','POST'],['refresh','POST']]){
+    for(const auth of [false,true]){
+      const response=await request(`/api/v1/internal/teams/p11/${action}`,method,method==='GET'?undefined:{snapshot:snapshot()},auth);
+      assert.equal(response.status,410);assert.equal((await response.json()).error.code,'ROSTER_RETIRED');
+    }
+  }
+  assert.equal((await db.prepare('SELECT count(*) n FROM team_roster_snapshots').first()).n,0);
+  const r=await worker.fetch(new Request('https://test/api/v1/internal/teams/p11/roster'),{ENVIRONMENT:'development',PUBLIC_API_ENABLED:'true'});
+  assert.equal(r.status,410);
 });
-test("real Python HTTP adapter synchronizes the Phase 2 fixture into local D1",async()=>{
-  const origin=await mf.ready;
-  const root=fileURLToPath(new URL("../../",import.meta.url));
-  const code=`import os\nfrom pathlib import Path\nfrom h43_scraper.cloudflare import CloudflareRosterStore\nfrom h43_scraper.youth_roster import TeamConfig,synchronize\nstore=CloudflareRosterStore(os.environ['H43_API_URL'],os.environ['H43_INGEST_TOKEN'],allow_local_http=True)\nhtml=Path('tests/fixtures/sportadmin_youth_sample.html').read_text(encoding='utf-8')\nresult=synchronize(TeamConfig(),store,fetch=lambda _:html)\nprint(result.status)\nraise SystemExit(0 if result.status=='success' else 1)`;
-  const child=spawn(process.env.PYTHON || "python",["-c",code],{cwd:root,env:{...process.env,H43_API_URL:origin.origin,H43_INGEST_TOKEN:token,PYTHONPATH:root+"/src",NO_PROXY:"localhost,127.0.0.1"},windowsHide:true});
-  let stdout="",stderr="";child.stdout.on("data",d=>stdout+=d);child.stderr.on("data",d=>stderr+=d);
-  const exit=await new Promise((resolve,reject)=>{child.on("error",reject);child.on("exit",resolve);});
-  assert.equal(exit,0,stderr+stdout);
-  const value=await publicValue();assert.equal(value.roster.players.length,2);assert.equal(value.roster.coaches.length,1);
+
+test('historical roster content never reaches the public API regardless of authorization or source failure',async()=>{
+  await db.prepare('INSERT INTO team_roster_snapshots(team_id,season,observed_at,observed_us,players_json,coaches_json,group_id) VALUES(?,?,?,?,?,?,?)')
+    .bind('p11',season,time(),Date.now()*1000,JSON.stringify([{name:'Private Player',sourceId:'100',memberKey:crypto.randomUUID()}]),JSON.stringify([{name:'Private Leader'}]),'378673').run();
+  for(const badSources of [false,true]){
+    upstreamBad=badSources;await db.prepare("UPDATE teams SET cache_version=cache_version+1 WHERE id='p11'").run();
+    const response=await request(),v=await response.json(),raw=JSON.stringify(v);
+    assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');
+    assert.deepEqual(v.roster,{players:[],coaches:[],lastSyncedAt:null});assert.equal(v.dataStatus.roster,'withheld');
+    for(const secret of ['Private Player','Private Leader','sourceId','memberKey',token,hash])assert.ok(!raw.includes(secret));
+  }
+});
+
+test('retired roster storage is not queried and invalid configuration still fails closed',async()=>{
+  const fake={id:'p11',name:'P11',current_season:null,cache_version:0,welcome_description:'x'.repeat(5000)};
+  const queried=[];
+  const r=await worker.fetch(new Request('https://test/api/v1/teams/p11'),{ENVIRONMENT:'development',PUBLIC_API_ENABLED:'true',ALLOWED_ORIGINS:'',
+    DB:{prepare(sql){queried.push(sql);return{bind(){return this;},async first(){return sql.includes('r.content_json')?null:fake;}}}}});
+  assert.equal(r.status,200);assert.ok(queried.every(sql=>!sql.includes('team_roster_snapshots')));
+  fake.name='x'.repeat(500000);const invalid=await worker.fetch(new Request('https://test/api/v1/teams/p11'),{ENVIRONMENT:'development',PUBLIC_API_ENABLED:'true',ALLOWED_ORIGINS:'',DB:{prepare(){return{bind(){return this;},async first(){return fake;}}}}});
+  assert.equal(invalid.status,503);
 });
 test("unknown and SQL-shaped team IDs cannot escape parameterized lookups",async()=>{
   assert.equal((await request("/api/v1/teams/unknown")).status,404);
   assert.equal((await request("/api/v1/teams/p11%27%20OR%201=1--")).status,400);
   assert.equal((await db.prepare("SELECT count(*) AS n FROM teams").first()).n,2);
-});
-test("unauthenticated and invalid credentials cannot ingest or read private data",async()=>{
-  const path="/api/v1/internal/teams/p11/roster";
-  assert.equal((await request(path,"PUT",{snapshot:snapshot()})).status,401);
-  assert.equal((await request(path)).status,401);
-  assert.equal((await request(path,"PUT",{},false,{Authorization:`Bearer ${randomBytes(32).toString("base64url")}`})).status,401);
-  assert.equal((await db.prepare("SELECT count(*) AS n FROM team_roster_snapshots").first()).n,0);
-});
-test("credential scope and payload mapping prevent cross-team/source updates",async()=>{
-  assert.equal((await put(snapshot(),null,"other")).status,403);
-  const wrong=snapshot();wrong.team.id="other";
-  assert.equal((await put(wrong)).status,403);
-  const source=snapshot();source.team.sportadmin_group_id="999";source.team.source_url="https://h43lund.web.sportadmin.se/grupp/?ID=999";
-  assert.equal((await put(source)).status,403);
-});
-test("future teams use configuration and cannot inherit P11 names",async()=>{
-  await put(snapshot());
-  const response=await request("/api/v1/teams/other");assert.equal(response.status,200);
-  const value=await response.json();assert.equal(value.id,"other");assert.deepEqual(value.roster.players,[]);
-});
-test("browser-origin ingestion is forbidden even with a valid credential",async()=>{
-  assert.equal((await request("/api/v1/internal/teams/p11/roster","GET",undefined,true,{Origin:"https://www.h43lund.se"})).status,403);
-});
-test("malformed JSON, oversized chunks and extra payload fields are rejected",async()=>{
-  const headers={Authorization:`Bearer ${token}`,"Content-Type":"application/json"};
-  const path="https://api.test/api/v1/internal/teams/p11/roster";
-  assert.equal((await mf.dispatchFetch(path,{method:"PUT",headers,body:"{"})).status,400);
-  assert.equal((await mf.dispatchFetch(path,{method:"PUT",headers,body:"x".repeat(65537)})).status,413);
-  assert.equal((await put(snapshot(),null,"p11",{admin:true})).status,422);
-  const v=snapshot();v.players[0].image_url="https://not-needed.invalid";
-  assert.equal((await put(v)).status,422);
-});
-test("streamed requests enforce limits even without Content-Length",async()=>{
-  const stream=new ReadableStream({start(controller){controller.enqueue(new Uint8Array(40000));controller.enqueue(new Uint8Array(40000));controller.close();}});
-  const result=await mf.dispatchFetch("https://api.test/api/v1/internal/teams/p11/roster",{method:"PUT",duplex:"half",
-    headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:stream});
-  assert.equal(result.status,413);
-});
-test("public response limit fails closed instead of returning an oversized roster",async()=>{
-  const fake={id:"p11",name:"P11",publication_authorized:1,current_season:null,
-    observed_at:time(),observed_us:Date.now()*1000,cache_version:0,sync_status:"success",
-    players_json:JSON.stringify(Array.from({length:300},()=>({name:"漢".repeat(150)}))),
-    coaches_json:JSON.stringify(Array.from({length:300},()=>({name:"漢".repeat(150)})))};
-  const result=await worker.fetch(new Request("https://test/api/v1/teams/p11"),{ENVIRONMENT:"development",PUBLIC_API_ENABLED:"true",ALLOWED_ORIGINS:"",
-    DB:{prepare(sql){return {bind(){return this;},async first(){return sql.includes('r.content_json')?null:fake;}}}}});
-  assert.equal(result.status,503);assert.equal((await result.json()).error.code,"RESPONSE_TOO_LARGE");
-});
-for(const attack of ["<script>alert(1)</script>",'<img src=x onerror="alert(1)">',"Namn\nAnnat"]){
-  test("XSS or non-normalized name is rejected: "+JSON.stringify(attack),async()=>{
-    assert.equal((await put(snapshot(time(),[{name:attack}],[]))).status,422);
-  });
-}
-test("SQL metacharacters in a valid name are stored as data, not SQL",async()=>{
-  const name="O'Connor'); DROP TABLE teams;--";
-  assert.equal((await put(snapshot(time(),[{name}],[]))).status,200);
-  assert.equal((await publicValue()).roster.players[0].displayName,name);
-  assert.equal((await db.prepare("SELECT count(*) AS n FROM teams").first()).n,2);
-});
-test("same-name people remain distinct and Unicode is preserved",async()=>{
-  assert.equal((await put(snapshot(time(),[{name:"Björn Äng"},{name:"Björn Äng"}],[]))).status,200);
-  assert.equal((await publicValue()).roster.players.length,2);
-});
-test("empty snapshots and automatic removal are immediately reflected without a roster cache",async()=>{
-  const first=snapshot();assert.equal((await put(first)).status,200);
-  await publicValue();
-  assert.equal((await put(snapshot(time(1000),[],[]),first.observed_at)).status,200);
-  const v=await publicValue();assert.deepEqual(v.roster.players,[]);assert.deepEqual(v.roster.coaches,[]);assert.equal(v.dataStatus.roster,"empty");
-});
-test("replay, stale expected version and out-of-order observations cannot overwrite newer data",async()=>{
-  const first=snapshot();assert.equal((await put(first)).status,200);
-  assert.equal((await put(first,first.observed_at)).status,409);
-  assert.equal((await put(snapshot(time(-1000)),first.observed_at)).status,409);
-  assert.equal((await put(snapshot(time(1000)),null)).status,409);
-  assert.equal((await put(snapshot(time(2000)),time(-500))).status,409);
-  assert.equal((await publicValue()).roster.players.length,1);
-});
-test("microsecond versions are compared without millisecond rounding",async()=>{
-  const base=time().slice(0,19);
-  const a=snapshot(base+".123001Z"), b=snapshot(base+".123002Z",[],[]);
-  assert.equal((await put(a)).status,200);
-  assert.equal((await put(b,a.observed_at)).status,200);
-  assert.equal((await put(a,b.observed_at)).status,409);
-});
-test("concurrent writes with one expected version have exactly one winner",async()=>{
-  const a=snapshot();await put(a);
-  const responses=await Promise.all([put(snapshot(time(1000),[],[]),a.observed_at),put(snapshot(time(2000)),a.observed_at)]);
-  assert.deepEqual(responses.map(r=>r.status).sort(),[200,409]);
-});
-test("future and very old timestamps are rejected",async()=>{
-  assert.equal((await put(snapshot(new Date(Date.now()+600000).toISOString()))).status,422);
-  assert.equal((await put(snapshot(new Date(Date.now()-2*86400000).toISOString()))).status,422);
-});
-test("season transition does not inherit old data or accept a stale season envelope",async()=>{
-  const first=snapshot();await put(first);
-  await db.prepare("INSERT INTO team_seasons(team_id,season,starts_on,ends_on,publication_authorized) VALUES('p11','next',?1,?2,1)").bind(`${currentYear}-01-01`,`${currentYear+1}-12-31`).run();
-  await db.prepare("UPDATE teams SET current_season='next' WHERE id='p11'").run();
-  assert.deepEqual((await publicValue()).roster.players,[]);
-  assert.equal((await put(snapshot(time(1000)))).status,409);
-});
-test("failure reports mark roster stale without modifying valid membership",async()=>{
-  const first=snapshot();await put(first);
-  assert.equal((await request("/api/v1/internal/teams/p11/failure","POST",{season,attemptedAt:time(1000)},true)).status,200);
-  const v=await publicValue();assert.equal(v.dataStatus.roster,"stale");assert.equal(v.roster.players.length,1);
-});
-test("publication is withheld until configured and withdrawal is immediate",async()=>{
-  await put(snapshot());await db.prepare("UPDATE team_seasons SET publication_authorized=0 WHERE team_id='p11'").run();
-  const v=await publicValue();assert.equal(v.dataStatus.roster,"withheld");assert.deepEqual(v.roster.players,[]);assert.equal(v.roster.lastSyncedAt,null);
 });
 test("CORS is exact, no credentials, and is not authentication",async()=>{
   const good=await request(undefined,"GET",undefined,false,{Origin:"https://www.h43lund.se"});
@@ -255,30 +160,10 @@ test("calendar resolves weekday/day/month without requiring a manual year settin
   await db.prepare("UPDATE team_seasons SET calendar_year=NULL,calendar_month=NULL WHERE team_id='p11'").run();
   calendar=[event()];assert.equal((await publicValue()).dataStatus.calendar,"available");
 });
-test("current-team mode synchronizes and serves schedules without a season or date boundaries",async()=>{
-  await db.prepare("INSERT INTO team_seasons(team_id,season,starts_on,ends_on,publication_authorized) VALUES('p11','current','','',1)").run();
-  await db.prepare("UPDATE teams SET current_season='current' WHERE id='p11'").run();
-  calendar=[event()];matches=[match()];
-  const r=await request("/api/v1/internal/teams/p11/roster","PUT",{season:"current",snapshot:snapshot(),expectedObservedAt:null},true);
-  assert.equal(r.status,200);
-  const v=await publicValue();assert.equal(v.season,null);assert.equal(v.roster.players.length,1);
-  assert.equal(v.dataStatus.calendar,"available");assert.equal(v.dataStatus.matches,"available");
-});
 test("calendar year resolution handles December/January and rejects invalid dates",()=>{
   assert.equal(calendarYear(12,31,"ons",2026),2025);
   assert.equal(calendarYear(1,1,"fre",2026),2027);
   assert.equal(calendarYear(2,30,"mån",2026),null);
-});
-test("schedule TTL reuses data; authenticated generation change bypasses all old keys",async()=>{
-  await publicValue();const firstCalls=sourceCalls;assert.equal(firstCalls,2);
-  await publicValue();assert.equal(sourceCalls,firstCalls);
-  assert.equal((await request("/api/v1/internal/teams/p11/refresh","POST",{})).status,401);
-  assert.equal((await request("/api/v1/internal/teams/p11/refresh","POST",{},true)).status,200);
-  await publicValue();assert.equal(sourceCalls,firstCalls+2);
-});
-test("source errors do not stop valid roster delivery",async()=>{
-  await put(snapshot());upstreamBad=true;const v=await publicValue();
-  assert.equal(v.roster.players.length,1);assert.equal(v.dataStatus.matches,"unavailable");
 });
 test("Stockholm DST conversion rejects ambiguous and nonexistent local times",()=>{
   assert.equal(stockholmInstant(2026,1,15,"17:00"),"2026-01-15T16:00:00.000Z");
@@ -346,17 +231,4 @@ test('explicit played matches use the dedicated feed, newest first, safe results
 test('played match history is bounded to the latest hundred and accepts zero scores',async()=>{
   matches=Array.from({length:110},(_,i)=>({...match(-1,'17:00','played'),away:`Opponent ${i}`,score:'0 - 0'}));
   const v=await publicValue();assert.equal(v.playedMatches.length,100);assert.equal(v.playedMatches[0].score,'0–0');assert.equal(v.upcomingMatches.length,0);
-});
-
-test('source member identities retain keys only for continuous unchanged members and never leak publicly',async()=>{
-  const read=async()=>JSON.parse((await db.prepare("SELECT players_json FROM team_roster_snapshots WHERE team_id='p11'").first()).players_json);
-  let at=time();assert.equal((await put(snapshot(at,[{name:'Same Name',sourceId:'100'},{name:'Same Name',sourceId:'101'}]))).status,200);
-  const initial=await read();assert.notEqual(initial[0].memberKey,initial[1].memberKey);assert.ok(initial[0].memberKey);
-  let next=time(1000);assert.equal((await put(snapshot(next,[{name:'Same Name',sourceId:'101'},{name:'Same Name',sourceId:'100'}]),at)).status,200);assert.equal((await read())[0].memberKey,initial[1].memberKey);
-  at=next;next=time(2000);await put(snapshot(next,[{name:'Renamed',sourceId:'100'}]),at);const renamed=await read();assert.notEqual(renamed[0].memberKey,initial[0].memberKey);
-  at=next;next=time(3000);await put(snapshot(next,[]),at);at=next;next=time(4000);await put(snapshot(next,[{name:'Same Name',sourceId:'101'}]),at);assert.notEqual((await read())[0].memberKey,initial[1].memberKey);
-  const value=await publicValue();assert.deepEqual(value.roster.players,[{displayName:'Same Name'}]);
-  const internal=await (await request('/api/v1/internal/teams/p11/roster','GET',undefined,true)).json();assert.equal(internal.snapshot.players[0].sourceId,'101');assert.equal(internal.snapshot.players[0].memberKey,undefined);
-  const invalid={...snapshot(time(5000)),players:[{name:'One',sourceId:'1',memberKey:crypto.randomUUID()}]};assert.equal((await put(invalid,next)).status,422);
-  assert.equal((await put(snapshot(time(5000),[{name:'One',sourceId:'1'},{name:'Two',sourceId:'1'}]),next)).status,422);
 });

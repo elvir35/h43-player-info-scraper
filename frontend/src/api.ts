@@ -34,14 +34,10 @@ function date(v:unknown):string {
 function choice<T extends string>(v:unknown,values:readonly T[]):T {
   if(!values.includes(v as T))throw new Error("Invalid state");return v as T;
 }
-function people(v:unknown):{displayName:string}[]{
-  if(!Array.isArray(v)||v.length>300)throw new Error("Invalid names");
-  return v.map(p=>{const name=text(record(p).displayName,150);if(!name.trim())throw new Error("Empty name");const row=record(p);const shirtNumber=nullable(row.shirtNumber??null,3);if(shirtNumber&&!/^[0-9]{1,3}$/.test(shirtNumber))throw new Error('Invalid shirt number');const position=nullable(row.position??null,60),responsibility=nullable(row.responsibility??null,60);const imageUrl=nullable(row.imageUrl??null,2048);return {displayName:name,...(imageUrl?{imageUrl}:{}),...(shirtNumber?{shirtNumber}:{}),...(position?{position}:{}),...(responsibility?{responsibility}:{})};});
-}
 export function validateTeam(value:unknown,expectedId:string):Team {
   const r=record(value);
   if(r.apiVersion!=="1" || r.id!==expectedId)throw new Error("Mismatched API response");
-  const w=record(r.welcome),roster=record(r.roster),social=record(r.social),contact=record(r.contact),state=record(r.dataStatus);
+  const w=record(r.welcome),social=record(r.social),contact=record(r.contact),state=record(r.dataStatus);
   if(!Array.isArray(r.upcomingEvents)||r.upcomingEvents.length>100)throw new Error("Invalid calendar");
   const activities=r.upcomingEvents.map(value=>{
     const e=record(value);return {id:text(e.id,100),type:choice(e.type,["training","match","other"]),title:text(e.title,200),
@@ -63,9 +59,9 @@ export function validateTeam(value:unknown,expectedId:string):Team {
     return {...parseMatch({...m,status:'scheduled'}),status:'played',score};});
   return {id:expectedId,name:text(r.name,150),season:nullable(r.season,40),
     welcome:{title:nullable(w.title,120),description:nullable(w.description,5000),heroImageUrl:nullable(w.heroImageUrl,2048),heroAlt:nullable(w.heroAlt??null,160),seasonMessage:nullable(w.seasonMessage??null,600)},
-    roster:{players:people(roster.players),coaches:people(roster.coaches),lastSyncedAt:roster.lastSyncedAt===null?null:date(roster.lastSyncedAt)},
+    roster:{players:[],coaches:[],lastSyncedAt:null},
     nextMatch:match,upcomingMatches,playedMatches,upcomingEvents:activities,social:{instagram:nullable(social.instagram,2048),tiktok:nullable(social.tiktok,2048),instagramLabel:nullable(social.instagramLabel??null,40),tiktokLabel:nullable(social.tiktokLabel??null,40)},contact:{email:nullable(contact.email,254),phone:nullable(contact.phone??null,40),text:nullable(contact.text??null,600),people:contactPeople},
-    dataStatus:{roster:choice(state.roster,["available","empty","unavailable","withheld","stale"]),calendar:choice(state.calendar,["available","empty","unavailable"]),matches:choice(state.matches,["available","empty","unavailable"]),playedMatches:choice(state.playedMatches??"unavailable",["available","empty","unavailable"])}};
+    dataStatus:{roster:"withheld",calendar:choice(state.calendar,["available","empty","unavailable"]),matches:choice(state.matches,["available","empty","unavailable"]),playedMatches:choice(state.playedMatches??"unavailable",["available","empty","unavailable"])}};
 }
 export function httpsUrl(value:string|null):string|null {
   if(!value)return null;

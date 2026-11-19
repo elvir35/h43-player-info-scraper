@@ -1,7 +1,6 @@
-import {editableRoster,validateDetails,project} from './roster-details';
 import {authenticate,csrf,mutation,type Actor,type AuthEnv} from './admin-auth';
 import {ApiError,fail,object,plain,requestJson,slug,MAX_RESPONSE} from './validation';
-import {content,email,integer,uuid,publicContent,type Content} from './editorial';
+import {content,email,integer,uuid,publicContent,retiredImage,type Content} from './editorial';
 import {normalizeJpeg,normalizeWithImages} from './admin-images';
 export {normalizeWithImages} from './admin-images';
 interface Env extends AuthEnv{ASSETS:Fetcher;IMAGES?:R2Bucket;IMAGE_PROCESSOR?:ImagesBinding;IMAGE_UPLOADS_ENABLED?:string;PUBLIC_API:Fetcher;PUBLIC_API_ORIGIN:string;RATE_LIMITER?:{limit(options:{key:string}):Promise<{success:boolean}>};}
@@ -31,34 +30,35 @@ async function source(env:Env,id:string){
   if(!response.ok)fail(503,'PREVIEW_SOURCE_UNAVAILABLE');const raw=await response.text();if(new TextEncoder().encode(raw).length>MAX_RESPONSE)fail(503,'PREVIEW_SOURCE_UNAVAILABLE');
   const value=JSON.parse(raw) as Record<string,unknown>;if(value.id!==id||value.apiVersion!=='1')fail(503,'PREVIEW_SOURCE_UNAVAILABLE');return value;
 }
+async function safeContent(env:Env,raw:string){
+  const c=content(JSON.parse(raw));
+  if(c.heroImageId&&await retiredImage(env.DB,c.heroImageId)){c.heroImageId=null;c.heroAlt=null;}
+  return c;
+}
 async function getContent(env:Env,actor:Actor,state:State){
   const revisions=await env.DB.prepare('SELECT id,published_at,published_by,restored_from FROM team_content_revisions WHERE team_id=?1 AND season=?2 ORDER BY published_at DESC,rowid DESC LIMIT 50').bind(state.team_id,state.season).all();
   const head=state.published_revision_id?await env.DB.prepare('SELECT content_json,published_at,published_by FROM team_content_revisions WHERE id=?1 AND team_id=?2 AND season=?3').bind(state.published_revision_id,state.team_id,state.season).first<{content_json:string;published_at:string;published_by:string}>():null;
   const permission=actor.role==='admin'?true:!!(await env.DB.prepare('SELECT can_publish FROM admin_team_assignments WHERE email=?1 AND team_id=?2').bind(actor.email,state.team_id).first<{can_publish:number}>())?.can_publish;
-  const roster=await editableRoster(env.DB,state.team_id,state.season);
-  return {roster:{lastSyncedAt:roster.lastSyncedAt,players:roster.players.map(m=>({displayName:m.name,memberKey:m.memberKey??null})),coaches:roster.coaches.map(m=>({displayName:m.name,memberKey:m.memberKey??null}))},team:{id:state.team_id,name:state.name,season:state.season,photoPublicationAllowed:state.photo_publication_allowed===1,configVersion:state.config_version},
-    draft:{version:state.draft_version,content:content(JSON.parse(state.draft_json))},published:head?{id:state.published_revision_id,content:content(JSON.parse(head.content_json)),at:head.published_at,by:head.published_by}:null,
+  return {roster:{lastSyncedAt:null,players:[],coaches:[]},team:{id:state.team_id,name:state.name,season:state.season,photoPublicationAllowed:state.photo_publication_allowed===1,configVersion:state.config_version},
+    draft:{version:state.draft_version,content:await safeContent(env,state.draft_json)},published:head?{id:state.published_revision_id,content:await safeContent(env,head.content_json),at:head.published_at,by:head.published_by}:null,
     canPublish:permission,features:{imageUploads:env.IMAGE_UPLOADS_ENABLED==='true'&&!!env.IMAGES&&(!!env.IMAGE_PROCESSOR||env.ENVIRONMENT==='development')},history:revisions.results};
 }
 async function save(env:Env,actor:Actor,state:State,value:unknown,supportsPortraits=false){
   const body=object(value,['expectedVersion','content']);const version=integer(body.expectedVersion),c=content(body.content);
-  const previous=content(JSON.parse(state.draft_json));
-  if(!supportsPortraits&&previous.rosterDetails.some(d=>d.imageId))fail(422,'ROSTER_DETAILS_OUT_OF_SYNC');
-  if(env.IMAGE_UPLOADS_ENABLED!=='true'&&c.rosterDetails.some(d=>d.imageId&&previous.rosterDetails.find(p=>p.memberKey===d.memberKey)?.imageId!==d.imageId))fail(503,'IMAGE_UPLOADS_DISABLED');
-  if(!Object.hasOwn(body.content as object,'rosterDetails')&&previous.rosterDetails.length)fail(422,'ROSTER_DETAILS_OUT_OF_SYNC');
-  const roster=await editableRoster(env.DB,state.team_id,state.season),rosterChanged=validateDetails(c.rosterDetails,previous.rosterDetails,roster);
+  if((body.content as Content).rosterDetails?.length)fail(410,'ROSTER_RETIRED');
+  if(c.heroImageId&&await retiredImage(env.DB,c.heroImageId))fail(422,'IMAGE_RETIRED');
   if(env.IMAGE_UPLOADS_ENABLED!=='true'&&c.heroImageId!==content(JSON.parse(state.draft_json)).heroImageId)fail(503,'IMAGE_UPLOADS_DISABLED');
   const results=await env.DB.batch([
     env.DB.prepare(`UPDATE team_content_state SET draft_json=?6,draft_version=draft_version+1,updated_by=?1,updated_at=?7
-      WHERE team_id=?3 AND season=?4 AND draft_version=?5 AND ${authority()} AND ${current} AND ${imageValid(8)} AND ${rosterImagesValid(6)} AND (?9 IS NULL OR EXISTS(SELECT 1 FROM team_roster_snapshots WHERE team_id=?3 AND season=?4 AND observed_us=?9))`)
-      .bind(actor.email,actor.subject,state.team_id,state.season,version,JSON.stringify(c),stamp(),c.heroImageId,rosterChanged?roster.version:null),
+      WHERE team_id=?3 AND season=?4 AND draft_version=?5 AND ${authority()} AND ${current} AND ${imageValid(8)} AND ${rosterImagesValid(6)}`)
+      .bind(actor.email,actor.subject,state.team_id,state.season,version,JSON.stringify(c),stamp(),c.heroImageId),
     audit(env,actor,'draft_saved',state,null,'changes()=1')]);checked(results);return {version:version+1};
 }
 async function publish(env:Env,actor:Actor,state:State,value:unknown,rollback=false){
   const body=object(value,rollback?['expectedVersion','expectedPublishedId','revisionId']:['expectedVersion','expectedPublishedId']);
   const version=integer(body.expectedVersion),expected=body.expectedPublishedId===null?null:uuid(body.expectedPublishedId);
-  let c=content(JSON.parse(state.draft_json)),restored:string|null=null;
-  if(rollback){restored=uuid(body.revisionId);const revision=await env.DB.prepare('SELECT content_json FROM team_content_revisions WHERE id=?1 AND team_id=?2 AND season=?3').bind(restored,state.team_id,state.season).first<{content_json:string}>();if(!revision)fail(404,'REVISION_NOT_FOUND');c=content(JSON.parse(revision.content_json));}
+  let c=await safeContent(env,state.draft_json),restored:string|null=null;
+  if(rollback){restored=uuid(body.revisionId);const revision=await env.DB.prepare('SELECT content_json FROM team_content_revisions WHERE id=?1 AND team_id=?2 AND season=?3').bind(restored,state.team_id,state.season).first<{content_json:string}>();if(!revision)fail(404,'REVISION_NOT_FOUND');c=await safeContent(env,revision.content_json);}
   const id=crypto.randomUUID(),at=stamp();
   const results=await env.DB.batch([
     env.DB.prepare(`INSERT INTO team_content_revisions(id,team_id,season,content_json,published_by,published_at,previous_id,restored_from)
@@ -93,6 +93,7 @@ async function upload(request:Request,env:Env,actor:Actor,state:State){
   return {id,url:`/api/admin/v1/teams/${state.team_id}/images/${id}`,width:normalized.width,height:normalized.height};
 }
 async function image(env:Env,state:State,id:string){
+  if(await retiredImage(env.DB,uuid(id)))fail(404,'IMAGE_NOT_FOUND');
   const row=await env.DB.prepare("SELECT object_key,content_type FROM team_images WHERE team_id=?1 AND season=?2 AND id=?3 AND state='ready'").bind(state.team_id,state.season,uuid(id)).first<{object_key:string;content_type:string}>();
   if(!row||!env.IMAGES)fail(404,'IMAGE_NOT_FOUND');const object=await env.IMAGES.get(row.object_key);if(!object)fail(404,'IMAGE_NOT_FOUND');
   return new Response(object.body,{headers:{'Content-Type':row.content_type,'Content-Length':String(object.size)}});
@@ -184,8 +185,9 @@ export default {
         if(route||preview||page){
           const id=slug((route||preview||page)![1]);const state=await team(env,actor,id,route?.[2]==='publish'||route?.[2]==='rollback');
           if(preview&&request.method==='GET'){
-            const c=content(JSON.parse(state.draft_json));const data={...await source(env,id),...publicContent(c,id,env.ADMIN_ORIGIN,true)};
-            const members=await editableRoster(env.DB,id,state.season);const status=(data as Record<string,any>).dataStatus.roster;if(status!=='withheld'){(data as Record<string,any>).roster={players:project(members.players,c.rosterDetails,'players',`/api/admin/v1/teams/${id}/images`),coaches:project(members.coaches,c.rosterDetails,'coaches'),lastSyncedAt:members.lastSyncedAt};}
+            const c=await safeContent(env,state.draft_json);const data={...await source(env,id),...publicContent(c,id,env.ADMIN_ORIGIN,true)};
+            (data as Record<string,any>).roster={players:[],coaches:[],lastSyncedAt:null};
+            (data as Record<string,any>).dataStatus.roster='withheld';
             if(c.heroImageId){const asset=await env.DB.prepare("SELECT id FROM team_images WHERE id=?1 AND team_id=?2 AND season=?3 AND state='ready'").bind(c.heroImageId,id,state.season).first();if(!asset)fail(409,'IMAGE_NOT_READY');data.welcome.heroImageUrl=`/api/admin/v1/teams/${id}/images/${c.heroImageId}`;}
             result=response(data);
           }else if(page&&request.method==='GET')result=new Response(`<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Förhandsvisning</title></head><body><div id="h43-team-page" data-team-id="${id}"></div><script src="/preview-assets/team-page.js" defer></script></body></html>`,{headers:{'Content-Type':'text/html; charset=utf-8'}});

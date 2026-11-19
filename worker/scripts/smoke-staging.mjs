@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import {spawn} from "node:child_process";
 import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {calendarYear} from "../dist/sources.js";
@@ -20,15 +19,7 @@ export function validateContract(value,expectedTeamId='p11'){
   assert.ok(value.season===null || typeof value.season==="string");
   keys(value.welcome,["title","description","heroImageUrl","heroAlt","seasonMessage"]);text(value.welcome.title,120);text(value.welcome.description,5000);text(value.welcome.heroAlt,160);text(value.welcome.seasonMessage,600);
   if(value.welcome.heroImageUrl!==null)assert.equal(new URL(value.welcome.heroImageUrl).protocol,"https:");
-  assert.deepEqual(Object.keys(value.roster).sort(),["players","coaches","lastSyncedAt"].sort());
-  for(const key of ["players","coaches"]){
-    assert.ok(Array.isArray(value.roster[key]));
-    for(const person of value.roster[key]){
-      keys(person,['displayName',...(person.shirtNumber!==undefined?['shirtNumber']:[]),...(person.position!==undefined?['position']:[]),...(person.responsibility!==undefined?['responsibility']:[]),...(person.imageUrl!==undefined?['imageUrl']:[])]);if(person.imageUrl!==undefined){const photo=new URL(person.imageUrl);assert.equal(photo.protocol,'https:');assert.match(photo.pathname,/^\/api\/v1\/teams\/[a-z0-9-]+\/images\/[a-f0-9-]{36}$/);}if(person.shirtNumber!==undefined)assert.match(person.shirtNumber,/^[0-9]{1,3}$/);if(person.position!==undefined)text(person.position,60);if(person.responsibility!==undefined)text(person.responsibility,60);assert.equal(typeof person.displayName,"string");
-      assert.ok(person.displayName.length>0 && person.displayName.length<=150);assert.ok(!/[<>\u0000-\u001f]/.test(person.displayName));
-    }
-  }
-  timestamp(value.roster.lastSyncedAt);
+  assert.deepEqual(value.roster,{players:[],coaches:[],lastSyncedAt:null});
   assert.ok(Array.isArray(value.upcomingEvents));assert.ok(value.upcomingEvents.length<=100);
   let previous="";
   for(const event of value.upcomingEvents){
@@ -50,7 +41,7 @@ export function validateContract(value,expectedTeamId='p11'){
   assert.deepEqual(Object.keys(value.social).sort(),["instagram","instagramLabel","tiktok","tiktokLabel"]);
   assert.deepEqual(Object.keys(value.contact).sort(),["email","people","phone","text"]);text(value.contact.text,600);text(value.contact.phone,40);if(value.contact.phone!==null){assert.match(value.contact.phone,/^\+?[0-9][0-9 ()-]*[0-9]$/);assert.ok(value.contact.phone.replace(/[^0-9]/g,'').length>=7&&value.contact.phone.replace(/[^0-9]/g,'').length<=15);}assert.ok(Array.isArray(value.contact.people)&&value.contact.people.length<=20);for(const p of value.contact.people){keys(p,['name','email','phone']);text(p.name,120);text(p.email,254);text(p.phone,40);assert.ok(p.email||p.phone);}text(value.social.instagramLabel,40);text(value.social.tiktokLabel,40);
   assert.deepEqual(Object.keys(value.dataStatus).sort(),["calendar","matches","playedMatches","roster"]);
-  assert.ok(["available","empty","stale","unavailable","withheld"].includes(value.dataStatus.roster));
+  assert.equal(value.dataStatus.roster,"withheld");
   for(const source of ["calendar","matches","playedMatches"])assert.ok(["available","empty","unavailable"].includes(value.dataStatus[source]));
   for(const platform of ["instagram","tiktok"])if(value.social[platform]!==null){
     const url=new URL(value.social[platform]);assert.equal(url.protocol,"https:");
@@ -67,15 +58,6 @@ async function getJson(url,options={}){
   const response=await fetch(url,{redirect:"manual",signal:AbortSignal.timeout(30000),...options});
   const body=await response.text();assert.ok(Buffer.byteLength(body)<=256*1024,"Response too large");
   return {response,value:body ? JSON.parse(body) : null};
-}
-async function liveRoster(){
-  const root=fileURLToPath(new URL("../../",import.meta.url));
-  const code="import json\nfrom datetime import datetime,timezone\nfrom h43_scraper.youth_roster import TeamConfig,fetch_roster_html,parse_roster\nt=TeamConfig()\ns=parse_roster(fetch_roster_html(t),t,datetime.now(timezone.utc))\nprint(json.dumps({'players':list(s.players),'coaches':list(s.coaches)}))";
-  const child=spawn(process.env.PYTHON || "python",["-c",code],{cwd:root,env:{...process.env,PYTHONPATH:root+"/src"},windowsHide:true});
-  let output="";child.stdout.on("data",d=>output+=d);child.stderr.resume();
-  const exit=await new Promise((ok,no)=>{child.on("error",no);child.on("exit",ok);});
-  assert.equal(exit,0,"Live SportAdmin comparison failed (details omitted to protect names)");
-  return JSON.parse(output);
 }
 function localKey(iso){
   const fmt=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Stockholm",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
@@ -121,8 +103,7 @@ export async function smokeStaging(base,{compareLive=true}={}){
   assert.match(response.headers.get("content-type"),/^application\/json/);
   assert.equal(response.headers.get("cache-control"),"no-store");assert.equal(response.headers.get("x-content-type-options"),"nosniff");
   assert.ok(response.headers.get("content-security-policy"));assert.equal(response.headers.get("access-control-allow-credentials"),null);
-  assert.notEqual(value.dataStatus.roster,"withheld","Staging publication authorization not established");
-  assert.notEqual(value.dataStatus.roster,"unavailable","No synchronized staging roster");
+  assert.equal(value.dataStatus.roster,"withheld");
   const unknown=await fetch(origin+"/api/v1/teams/not-a-configured-team");assert.equal(unknown.status,404);await unknown.body?.cancel();
   for(const method of ["POST","PUT","PATCH","DELETE"]){
     const r=await fetch(url,{method,redirect:"manual"});assert.equal(r.status,405);await r.body?.cancel();
@@ -131,15 +112,12 @@ export async function smokeStaging(base,{compareLive=true}={}){
   assert.equal(allowed.status,200);assert.equal(allowed.headers.get("access-control-allow-origin"),"https://www.h43lund.se");await allowed.body?.cancel();
   const denied=await fetch(url,{headers:{Origin:"https://untrusted.invalid"}});assert.equal(denied.status,403);await denied.body?.cancel();
   const preflight=await fetch(url,{method:"OPTIONS",headers:{Origin:"https://www.h43lund.se","Access-Control-Request-Method":"GET"}});assert.equal(preflight.status,204);
-  const unauth=await fetch(origin+"/api/v1/internal/teams/p11/roster");assert.equal(unauth.status,401);await unauth.body?.cancel();
+  const unauth=await fetch(origin+"/api/v1/internal/teams/p11/roster");assert.equal(unauth.status,410);await unauth.body?.cancel();
   let sources={};
   if(compareLive){
-    const roster=await liveRoster();
-    assert.deepEqual(value.roster.players.map(x=>x.displayName),roster.players,"Live player membership differs");
-    assert.deepEqual(value.roster.coaches.map(x=>x.displayName),roster.coaches,"Live coach membership differs");
     sources=await compareSources(value);
   }
-  return {status:"passed",url,checks:["contract","headers","unknown-team","unsupported-methods","cors","unauthenticated-ingestion",...(compareLive?["live-roster","live-schedules","chronological-next-match"]:[])],
+  return {status:"passed",url,checks:["contract","headers","unknown-team","unsupported-methods","cors","retired-ingestion",...(compareLive?["live-schedules","chronological-next-match"]:[])],
     players:value.roster.players.length,coaches:value.roster.coaches.length,upcomingEvents:value.upcomingEvents.length,
     nextMatchAt:value.nextMatch?.startsAt ?? null,...sources};
 }

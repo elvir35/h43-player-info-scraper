@@ -3,7 +3,7 @@ import teamSlugs from '../config/team-slugs.json';
 import {formattedText} from '../frontend/src/editorial-format.ts';
 const api='/api/admin/v1',main=document.getElementById('main'),status=document.getElementById('status');
 let me,csrfToken,selected=null,view=null,dirty=false,busy=false,expired=false,form,previewFrame,noticeTimer,navigationObserver;
-const fields={};let contactRows=[],rosterRows=[];
+const fields={};let contactRows=[];
 const teamLabel=team=>teamLabels[team.id]||team.name;
 function accessHelp(){const link=el('a','','elvir.arslanovic@gmail.com');link.href='mailto:elvir.arslanovic@gmail.com?subject='+encodeURIComponent('Behörighet till H43:s lagsidor');return el('p','access-help','Saknar du behörighet? Kontakta ',link,' för att få tillgång till rätt lag.');}
 function el(tag,cls='',...children){const node=document.createElement(tag);if(cls)node.className=cls;for(const child of children)if(child!==null)node.append(child);return node;}
@@ -21,7 +21,7 @@ async function request(path,method='GET',body){
   const response=await fetch(api+path,{method,headers,credentials:'same-origin',cache:'no-store',redirect:'manual',...(body===undefined?{}:{body:body instanceof Blob?body:JSON.stringify(body)})}).catch(()=>{throw new Error('Anslutningen kunde inte verifieras. Logga in igen eller försök på nytt.');});
   if(response.status===401||response.type==='opaqueredirect'){lock();throw new Error('Sessionen har gått ut.');}
   if(!response.headers.get('Content-Type')?.includes('application/json'))throw new Error('Oväntat svar. Logga in igen.');
-  const data=await response.json();if(!response.ok){const code=data.error?.code;throw new Error(({EDIT_CONFLICT:'Någon har ändrat innehållet. Ladda om laget innan du fortsätter. Dina osparade fält är kvar.',TEAM_NOT_AUTHORIZED:'Du saknar behörighet till laget.',USER_NOT_AUTHORIZED:'Du saknar behörighet till portalen.',CSRF_REJECTED:'Säkerhetskontrollen misslyckades. Logga in igen.',INVALID_SOCIAL_URL:'Ange en giltig Instagram- eller TikTok-profil.',IMAGE_TOO_LARGE:'Bilden är för stor.',INVALID_IMAGE:'Bildfilen kunde inte läsas.',IMAGE_DIMENSIONS:'Bilden har för stora dimensioner.',IMAGE_PROCESSING_UNAVAILABLE:'Bildtjänsten är tillfälligt otillgänglig. Försök igen senare. Den tidigare bilden är oförändrad.',IMAGE_UPLOADS_DISABLED:'Bilduppladdning är inte aktiverad.',INVALID_ROSTER_DETAILS:'Truppdetaljerna matchar inte aktuell trupp eller innehåller ogiltiga värden. Ladda om laget.',ROSTER_DETAILS_OUT_OF_SYNC:'Truppredigeringen har uppdaterats. Ladda om portalen innan du sparar.',INVALID_CONTACTS:'Varje kontaktperson behöver en mejladress eller ett telefonnummer. Högst 20 kontaktpersoner kan läggas till.',SELF_LOCKOUT_FORBIDDEN:'Du kan inte ta bort din egen administratörsåtkomst.',CONTACTS_OUT_OF_SYNC:'Kontaktredigeringen har uppdaterats. Ladda om portalen innan du sparar.',INVALID_PHONE:'Ange ett giltigt mobilnummer, till exempel 070-123 45 67 eller +46 70 123 45 67.',INVALID_CONTENT:'Texten innehåller otillåtna tecken eller är för lång.'})[code]||'Åtgärden kunde inte slutföras. Inga ändringar har publicerats.');}
+  const data=await response.json();if(!response.ok){const code=data.error?.code;throw new Error(({EDIT_CONFLICT:'Någon har ändrat innehållet. Ladda om laget innan du fortsätter. Dina osparade fält är kvar.',TEAM_NOT_AUTHORIZED:'Du saknar behörighet till laget.',USER_NOT_AUTHORIZED:'Du saknar behörighet till portalen.',CSRF_REJECTED:'Säkerhetskontrollen misslyckades. Logga in igen.',INVALID_SOCIAL_URL:'Ange en giltig Instagram- eller TikTok-profil.',IMAGE_TOO_LARGE:'Bilden är för stor.',INVALID_IMAGE:'Bildfilen kunde inte läsas.',IMAGE_DIMENSIONS:'Bilden har för stora dimensioner.',IMAGE_PROCESSING_UNAVAILABLE:'Bildtjänsten är tillfälligt otillgänglig. Försök igen senare. Den tidigare bilden är oförändrad.',IMAGE_UPLOADS_DISABLED:'Bilduppladdning är inte aktiverad.',ROSTER_RETIRED:'Truppfunktionen har tagits bort. Ladda om portalen innan du sparar.',IMAGE_RETIRED:'Den tidigare spelarbilden kan inte publiceras. Välj en lagbild.',INVALID_ROSTER_DETAILS:'Truppdetaljerna matchar inte aktuell trupp eller innehåller ogiltiga värden. Ladda om laget.',ROSTER_DETAILS_OUT_OF_SYNC:'Truppredigeringen har uppdaterats. Ladda om portalen innan du sparar.',INVALID_CONTACTS:'Varje kontaktperson behöver en mejladress eller ett telefonnummer. Högst 20 kontaktpersoner kan läggas till.',SELF_LOCKOUT_FORBIDDEN:'Du kan inte ta bort din egen administratörsåtkomst.',CONTACTS_OUT_OF_SYNC:'Kontaktredigeringen har uppdaterats. Ladda om portalen innan du sparar.',INVALID_PHONE:'Ange ett giltigt mobilnummer, till exempel 070-123 45 67 eller +46 70 123 45 67.',INVALID_CONTENT:'Texten innehåller otillåtna tecken eller är för lång.'})[code]||'Åtgärden kunde inte slutföras. Inga ändringar har publicerats.');}
   return data;
 }
 async function run(action){if(busy)return;busy=true;document.querySelectorAll('button:not(.notice-dismiss)').forEach(b=>b.disabled=true);try{await action();}catch(error){notice(error.message,{persist:true});if(!me&&!expired)main.replaceChildren(el('section','card lock',el('h1','','Portalen är inte tillgänglig'),el('p','',error.message),accessHelp(),button('Försök logga in igen',()=>location.reload(),'primary')));}finally{busy=false;document.querySelectorAll('button:not(.notice-dismiss)').forEach(b=>b.disabled=expired&&!b.dataset.login);syncButtons();}}
@@ -47,7 +47,7 @@ function field(key,label,{multiline=false,max=200,type='text',help=''}={}){
 }
 function checkbox(label,value,change){const input=el('input');input.type='checkbox';input.checked=value;input.addEventListener('change',()=>change(input.checked));return {node:el('label','check',input,el('span','',label)),input};}
 function readContact(row){return Object.fromEntries(Object.entries(row).map(([key,input])=>[key,input.value.trim()||null]));}
-function values(){const c={...view.draft.content};for(const [key,input]of Object.entries(fields))c[key]=input.type==='checkbox'?input.checked:input.value.trim()||null;c.contacts=contactRows.map(readContact).filter(p=>p.name||p.email||p.phone);c.contactEmail=c.contacts[0]?.email??null;c.contactPhone=c.contacts[0]?.phone??null;const active=new Set(rosterRows.map(r=>r.memberKey));c.rosterDetails=[...(view.draft.content.rosterDetails||[]).filter(d=>!active.has(d.memberKey)),...rosterRows.map(r=>({memberKey:r.memberKey,imageId:r.imageId??null,shirtNumber:r.shirtNumber?.value.trim()||null,position:r.position?.value.trim()||null,responsibility:r.responsibility?.value.trim()||null})).filter(d=>d.imageId||d.shirtNumber||d.position||d.responsibility)];return c;}
+function values(){const c={...view.draft.content};for(const [key,input]of Object.entries(fields))c[key]=input.type==='checkbox'?input.checked:input.value.trim()||null;c.contacts=contactRows.map(readContact).filter(p=>p.name||p.email||p.phone);c.contactEmail=c.contacts[0]?.email??null;c.contactPhone=c.contacts[0]?.phone??null;c.rosterDetails=[];return c;}
 function contactEditor(){
   const list=el('div','contact-editor-list');
   function draw(entries){contactRows=[];list.replaceChildren();for(const [index,person]of entries.entries()){
@@ -85,34 +85,8 @@ function publishedConfirmation(team){
 async function publish(){if(dirty)throw new Error('Spara utkastet först.');document.getElementById('publish-confirmation')?.remove();const team=view.team;await request(`/teams/${selected}/publish`,'POST',{expectedVersion:view.draft.version,expectedPublishedId:view.published?.id||null});await openTeam(selected,true);publishedConfirmation(team);}
 async function preview(){await save();const area=document.getElementById('preview-box');area.hidden=false;const shortcut=document.querySelector('[href="#preview-box"]');if(shortcut)shortcut.hidden=false;previewFrame=el('iframe','preview');previewFrame.title='Privat förhandsvisning av lagets utkast';previewFrame.src=`/teams/${selected}/preview`;area.replaceChildren(el('h2','','Privat förhandsvisning'),el('p','muted','Visar sparat utkast med aktuell SportAdmin-data. Detta publicerar ingenting.'),previewFrame);area.focus({preventScroll:true});area.scrollIntoView({block:'start'});}
 async function readonly(){const area=document.getElementById('readonly');try{const data=await request(`/preview/teams/${selected}`);if(!area.isConnected)return;
-  area.textContent=`Spelare: ${data.roster.players.length}\nLedare: ${data.roster.coaches.map(p=>p.displayName).join(', ')||'Ingen tillgänglig information'}\nKommande matcher: ${data.upcomingMatches.length}\nKommande aktiviteter: ${data.upcomingEvents.length}\nÄndra medlemskap och aktiviteter i SportAdmin.`;
+  area.textContent=`Kommande matcher: ${data.upcomingMatches.length}\nKommande aktiviteter: ${data.upcomingEvents.length}\nAktiviteter hämtas från SportAdmin.`;
 }catch{if(area.isConnected)area.textContent='SportAdmin-data kan inte förhandsvisas just nu. Redaktionell text kan fortfarande sparas.';}}
-function rosterEditor(){
-  rosterRows=[];const box=el('details','card',el('summary','','Truppdetaljer'),el('p','muted','Namn och medlemskap hämtas från SportAdmin. Här kan du lägga till valfritt tröjnummer, position eller ledaruppgift. Spara, förhandsvisa och publicera som vanligt.'));
-  if(view.roster?.lastSyncedAt)box.append(el('p','muted','Truppen synkroniserad: '+new Intl.DateTimeFormat('sv-SE',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Stockholm'}).format(new Date(view.roster.lastSyncedAt))));
-  for(const [kind,title]of [['players','Spelare'],['coaches','Ledare']]){
-    const list=el('div','roster-editor-list');box.append(el('h3','',title),list);
-    const members=view.roster?.[kind]||[];if(!members.length)list.append(el('p','muted','Ingen synkroniserad trupp tillgänglig.'));
-    for(const person of members){const item=el('fieldset','roster-editor-row',el('legend','',person.displayName));list.append(item);
-      if(!person.memberKey){item.append(el('p','muted','Redigering blir tillgänglig efter nästa truppsynkronisering med verifierad medlemsidentitet.'));continue;}
-      const stored=(view.draft.content.rosterDetails||[]).find(d=>d.memberKey===person.memberKey),row={memberKey:person.memberKey,imageId:stored?.imageId??null};
-      for(const [key,label,max]of kind==='players'?[['shirtNumber','Tröjnummer',3],['position','Position',60]]:[['responsibility','Uppgift',60]]){
-        const input=el('input');input.type='text';input.maxLength=max;input.value=stored?.[key]||'';input.setAttribute('aria-label',`${label} för ${person.displayName}`);if(key==='shirtNumber'){input.inputMode='numeric';input.pattern='[0-9]{1,3}';}input.addEventListener('input',changed);row[key]=input;item.append(el('label','field',label+' (valfritt)',input));
-      }
-      if(kind==='players'){
-        const photo=el('div','player-upload-preview');
-        const drawPhoto=()=>{photo.replaceChildren();if(row.imageId){const img=el('img','image-preview');img.src=`${api}/teams/${selected}/images/${row.imageId}`;img.alt=`Foto på ${person.displayName}`;photo.append(img);}};drawPhoto();
-        const picker=el('input');picker.type='file';picker.accept='image/jpeg,image/png,image/webp';picker.setAttribute('aria-label',`Spelarbild för ${person.displayName}`);picker.disabled=!view.features?.imageUploads;
-        picker.addEventListener('change',()=>run(async()=>{const file=picker.files[0];if(!file)return;try{notice('Förbereder och laddar upp spelarbilden…');const blob=await convert(file),uploaded=await request(`/teams/${selected}/images`,'POST',blob);row.imageId=uploaded.id;drawPhoto();changed();notice('Spelarbilden är privat uppladdad. Spara och publicera för att visa den på lagsidan.');}finally{picker.value='';}}));
-        if(view.features?.imageUploads)item.append(el('label','field','Spelarbild (valfritt)',picker));
-        item.append(photo,button('Ta bort spelarbild',()=>{row.imageId=null;drawPhoto();changed();}),el('small','muted','JPEG, PNG eller WebP, högst 10 MB. Publicera bara bilder som får visas på lagsidan. Bildbeskrivning skapas från spelarens namn.'));
-      }
-      if(kind==='coaches')item.append(el('small','muted','Till exempel Tränare, Lagledare eller Lagadministratör. Detta ändrar ingen inloggningsbehörighet.'));
-      rosterRows.push(row);
-    }
-  }
-  return box;
-}
 async function openTeam(id,force=false){
   if(dirty&&!force&&!confirm('Du har osparade ändringar. Vill du lämna dem?'))return;
   const result=await request(`/teams/${id}/content`);selected=id;view=result;dirty=false;for(const key of Object.keys(fields))delete fields[key];
@@ -124,7 +98,7 @@ async function openTeam(id,force=false){
     button('Ta bort bilden ur utkastet',()=>{view.draft.content.heroImageId=null;fields.heroAlt.value='';changed();imagePreview(null);}));image.querySelector('div').id='image-box';
   if(!view.features?.imageUploads){image.replaceChildren(el('h2','','Lagbild'),el('p','muted','Bilduppladdning är inte aktiverad i denna version. Använd sociala medier för nya lagbilder.'));}
   const social=el('section','card',el('h2','','Sociala medier'),el('div','grid',field('instagramUrl','Instagram-profil',{max:2048,type:'url'}),field('instagramLabel','Instagram-länktext (valfritt)',{max:40})),el('div','grid',field('tiktokUrl','TikTok-profil',{max:2048,type:'url'}),field('tiktokLabel','TikTok-länktext (valfritt)',{max:40})));
-  const contact=contactEditor(),rosterDetails=rosterEditor();
+  const contact=contactEditor();
   const source=el('section','card',el('h2','','SportAdmin · endast läsning'),el('p','readonly','Hämtar…'));source.querySelector('p').id='readonly';
   const publishButton=button('Publicera',publish,'gold');publishButton.id='publish';const editState=el('p','muted','Utkast laddat');editState.id='edit-state';
   const toolbar=el('div','actions toolbar',button('Spara utkast',save,'primary'),button('Spara & förhandsvisa',preview),publishButton,button('Ladda om laget',()=>openTeam(id)),editState);
@@ -133,12 +107,12 @@ async function openTeam(id,force=false){
     await request(`/teams/${selected}/rollback`,'POST',{expectedVersion:view.draft.version,expectedPublishedId:view.published?.id||null,revisionId:revision.id});await openTeam(selected,true);notice('Tidigare innehåll har publicerats som en ny version.');}));row.querySelector('button').dataset.requiresPublish='true';history.append(row);}
   const previewBox=el('section','card');previewBox.id='preview-box';previewBox.hidden=true;previewBox.tabIndex=-1;
   const historySection=el('details','card',el('summary','','Publiceringshistorik'),view.history.length?history:el('p','muted','Inga publiceringar ännu.'));
-  const sections=[[welcome,'editor-welcome','Välkomsttext'],[image,'editor-image','Lagbild'],[social,'editor-social','Sociala medier'],[contact,'editor-contact','Kontakt'],[rosterDetails,'editor-roster','Truppdetaljer'],[source,'editor-source','SportAdmin'],[historySection,'editor-history','Publiceringshistorik'],[previewBox,'preview-box','Förhandsvisning']];
+  const sections=[[welcome,'editor-welcome','Välkomsttext'],[image,'editor-image','Lagbild'],[social,'editor-social','Sociala medier'],[contact,'editor-contact','Kontakt'],[source,'editor-source','SportAdmin'],[historySection,'editor-history','Publiceringshistorik'],[previewBox,'preview-box','Förhandsvisning']];
   const shortcuts=el('nav','section-nav');shortcuts.setAttribute('aria-label','Gå till avsnitt');
   function shortcut(id,label,hidden=false){const a=el('a','',label);a.href=`#${id}`;a.hidden=hidden;a.addEventListener('click',event=>{const target=document.getElementById(id);if(!target||target.hidden)return;event.preventDefault();if(target.tagName==='DETAILS')target.open=true;target.focus({preventScroll:true});target.scrollIntoView({block:'start'});});shortcuts.append(a);}
   for(const [node,id,label]of sections){node.id=id;node.tabIndex=-1;shortcut(id,label,node.hidden);}
   if(me.role==='admin')shortcut('editor-admin','Administration');
-  form.append(welcome,image,social,contact,rosterDetails,source,historySection,previewBox,toolbar);
+  form.append(welcome,image,social,contact,source,historySection,previewBox,toolbar);
   const context=el('div','team-context',el('span','','Du redigerar lagsidan'),el('strong','',teamLabel(view.team)));context.setAttribute('role','region');context.setAttribute('aria-label','Aktuellt lag');
   const navigation=el('div','editor-navigation',context,shortcuts);
   main.replaceChildren(navigation,el('p','eyebrow','LAGETS INNEHÅLL'),el('h1','',teamLabel(view.team)),el('p','muted',view.published?'Publicerat innehåll finns. Utkast visas bara i portalen.':'Inget portalinnehåll har publicerats ännu.'),form);

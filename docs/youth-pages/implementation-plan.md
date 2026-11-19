@@ -1,4 +1,12 @@
-# Current delivery status — 2026-11-16
+# Roster retirement decision — 2026-11-19
+
+The user selected removal of the youth roster and cessation of scraping. Follow [the roster retirement release plan](roster-retirement.md), which supersedes person-level roster publication controls and six-hour youth synchronization as launch requirements. The live GitHub youth workflow is disabled; staging API/widget v1.26.0 and its additive portrait-denial migration are deployed. Production API/admin/widget deployment and historical roster cleanup are complete; see [the production report](roster-retirement-production.md). Preserve editorial contacts, team photos, matches and calendar feeds. The user approved deletion; live data and inventoried local copies are cleaned. Provider-managed recovery retention is documented in the production report. Other privacy/security launch gates remain applicable.
+
+# Privacy/security launch gates — 2026-11-19
+
+Before broader promotion, complete [the privacy and security launch-readiness plan](privacy-launch-readiness.md). This adds immediate staging containment, H43 publication-basis/retention decisions, verified SportAdmin restriction/person matching, server-enforced name/photo restrictions, GitHub data containment and final operational acceptance. SportAdmin continues to control membership; publication restrictions must survive synchronization, old drafts and recovery. These controls are proposed, not implemented. Existing production services are already active; historical deployment approvals do not establish individual publication permission. Phase 7 team discovery remains deferred.
+
+# Historical delivery status — 2026-11-16
 
 The production API/widget and Access-protected coach portal are active. Production authenticated synchronization is configured every six hours and its all-team dispatch passed; staging editing and ingestion are disabled. The user will publish the prepared Webnode embed/directory personally. See [the current cutover record](production-cutover.md). Image uploads, named contacts, editor navigation, registration CTA and optional roster details are available. Shared-page/team onboarding work is documented in [team-onboarding.md](team-onboarding.md). First automatic production ingestion, actual Webnode publication/verification and individual coach acceptance remain launch checks.
 

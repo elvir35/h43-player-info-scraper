@@ -6,7 +6,7 @@ import {loadBuildTarget} from './build-target.mjs';
 const require=createRequire(new URL('../../worker/package.json',import.meta.url));
 const {build}=require('esbuild');
 const root=fileURLToPath(new URL('../',import.meta.url));
-const version='1.25.0';
+const version='1.26.0';
 const target=await loadBuildTarget(root);
 const configuration=target.configuration;const dist=root+target.dist,archives=root+target.releases;
 const teamSlugs=JSON.parse(await readFile(root+'../config/team-slugs.json','utf8'));

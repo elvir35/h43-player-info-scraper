@@ -1,5 +1,9 @@
 # H43 Lund Squad Scraper
 
+## Youth roster retirement — 2026-11-19
+
+The user chose to remove youth roster display and stop scraping. The youth GitHub workflow is disabled; v1.26.0 removes public/editor roster UI, returns empty compatibility fields, rejects retired ingestion and blocks known player portraits. Matches, calendar, team images and named editorial contacts remain. The production API/widget/editor are deployed and historical roster cleanup is complete. Webnode asset repinning remains the user's task. See the production report in docs/youth-pages/roster-retirement-production.md. See [the retirement release plan](docs/youth-pages/roster-retirement.md). Older phase notes below are historical. The separate senior-team scraper is unchanged.
+
 ## Coach portal (Phase 5, local candidate)
 
 The Swedish editor, Access JWT verification, team-scoped permissions, private drafts/preview,

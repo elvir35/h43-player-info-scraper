@@ -28,7 +28,8 @@ export function content(value:unknown):Content{
     if(keys.has(key))fail(422,'INVALID_ROSTER_DETAILS');keys.add(key);
     const shirtNumber=optional(d.shirtNumber,3);if(shirtNumber&&!/^[0-9]{1,3}$/.test(shirtNumber))fail(422,'INVALID_ROSTER_DETAILS');
     return {imageId:d.imageId==null?null:uuid(d.imageId),memberKey:key,shirtNumber,position:optional(d.position,60),responsibility:optional(d.responsibility,60)};});
-  return {rosterDetails,welcomeTitle:optional(c.welcomeTitle,120),welcomeDescription:optional(c.welcomeDescription,5000,true),seasonMessage:optional(c.seasonMessage,600,true),
+  // Accept legacy revisions but never expose or republish their retired overlays.
+  return {rosterDetails:[],welcomeTitle:optional(c.welcomeTitle,120),welcomeDescription:optional(c.welcomeDescription,5000,true),seasonMessage:optional(c.seasonMessage,600,true),
     heroImageId:c.heroImageId===null?null:uuid(c.heroImageId),heroAlt:optional(c.heroAlt,160),photoPublicationConfirmed:c.photoPublicationConfirmed,
     instagramUrl:profile('instagramUrl','instagram'),instagramLabel:optional(c.instagramLabel,40),tiktokUrl:profile('tiktokUrl','tiktok'),tiktokLabel:optional(c.tiktokLabel,40),
     contacts,contactEmail:legacyEmail,contactPhone:legacyPhone,contactText:optional(c.contactText,600,true)};
@@ -48,12 +49,18 @@ export async function publicImage(db:D1Database,bucket:R2Bucket|undefined,teamId
     JOIN team_content_state s ON s.team_id=t.id AND s.season=t.current_season
     JOIN team_content_revisions r ON r.id=s.published_revision_id AND r.team_id=s.team_id AND r.season=s.season
     JOIN team_images i ON i.team_id=s.team_id AND i.season=s.season AND i.id=?2 AND i.state='ready'
-    WHERE t.id=?1 AND t.enabled=1 AND (json_extract(r.content_json,'$.heroImageId')=i.id OR
-      EXISTS(SELECT 1 FROM team_seasons ts JOIN team_roster_snapshots rs ON rs.team_id=ts.team_id AND rs.season=ts.season AND rs.group_id=t.group_id,
-        json_each(rs.players_json) m,json_each(r.content_json,'$.rosterDetails') d
-        WHERE ts.team_id=t.id AND ts.season=t.current_season AND ts.publication_authorized=1
-        AND json_extract(d.value,'$.memberKey')=json_extract(m.value,'$.memberKey') AND json_extract(d.value,'$.imageId')=i.id))`)
+    WHERE t.id=?1 AND t.enabled=1 AND json_extract(r.content_json,'$.heroImageId')=i.id
+      AND NOT EXISTS(SELECT 1 FROM retired_roster_images WHERE image_id=i.id)
+      AND NOT EXISTS(SELECT 1 FROM team_content_state old,json_each(old.draft_json,'$.rosterDetails') d WHERE json_extract(d.value,'$.imageId')=i.id)
+      AND NOT EXISTS(SELECT 1 FROM team_content_revisions old,json_each(old.content_json,'$.rosterDetails') d WHERE json_extract(d.value,'$.imageId')=i.id)`)
     .bind(slug(teamId),uuid(imageId)).first<{object_key:string;content_type:string}>();
   if(!row||!bucket)fail(404,'IMAGE_NOT_FOUND');const image=await bucket.get(row.object_key);if(!image)fail(404,'IMAGE_NOT_FOUND');
   return new Response(image.body,{headers:{'Content-Type':row.content_type,'Content-Length':String(image.size),'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'",'Content-Disposition':`inline; filename="${imageId}.${row.content_type==='image/webp'?'webp':'jpg'}"`}});
+}
+
+export async function retiredImage(db:D1Database,id:string){
+  return !!await db.prepare(`SELECT 1 AS blocked WHERE EXISTS(SELECT 1 FROM retired_roster_images WHERE image_id=?1)
+    OR EXISTS(SELECT 1 FROM team_content_state s,json_each(s.draft_json,'$.rosterDetails') d WHERE json_extract(d.value,'$.imageId')=?1)
+    OR EXISTS(SELECT 1 FROM team_content_revisions r,json_each(r.content_json,'$.rosterDetails') d WHERE json_extract(d.value,'$.imageId')=?1)`)
+    .bind(id).first();
 }

@@ -1,3 +1,7 @@
+# Youth roster integration retired — 2026-11-19
+
+The user chose to stop youth roster scraping and remove public roster display. The GitHub youth workflow is disabled; replacement workflow/CLI code performs no scraping or ingestion. The retirement-aware API/widget is deployed to production and historical roster cleanup is complete; see [the production report](roster-retirement-production.md). Matches and calendar continue using the existing dedicated APIs and team mappings. The senior-team scraper is unchanged. Historical scraper findings below remain reference material, not an enabled integration. See [roster retirement](roster-retirement.md).
+
 # SportAdmin integration
 
 Status: Phase 3 integrated locally, 2026-11-11. SportAdmin remains authoritative; no player approval or membership editing workflow.

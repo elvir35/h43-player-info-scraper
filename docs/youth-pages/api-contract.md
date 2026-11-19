@@ -1,3 +1,7 @@
+# Roster retirement amendment — 2026-11-19
+
+The deployed v1.26.0 release retires youth roster publication. Public team responses always contain `roster: {players: [], coaches: [], lastSyncedAt: null}` and `dataStatus.roster: "withheld"` for compatibility with pinned v1 widgets. No names, portraits, numbers, positions, responsibilities or roster freshness are returned. Private roster GET/PUT and failure/refresh POST routes return 410 `ROSTER_RETIRED`; valid old tokens cannot restore access. Public image delivery is limited to the current team hero and denies known retired portraits. Admin content/preview roster fields are also empty; saves with nonempty retired overlays fail 410. Other public fields and authorization remain unchanged. These changes are deployed in production as of 2026-11-19. Historical roster data has been cleaned; provider-managed history limitations are recorded in [the production report](roster-retirement-production.md). See [retirement status and rollout](roster-retirement.md).
+
 # Youth pages API v1 and synchronization contract
 
 Status: Phase 4 is deployed to isolated staging; Phase 5 additions below are locally implemented candidates, **not deployed**, 2026-11-11. Phase 4's tabbed release includes `upcomingMatches`. Snapshot/ingestion contracts remain unchanged; membership review/removal routes are not part of the API.

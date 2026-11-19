@@ -49,4 +49,6 @@ test("smoke contract validator rejects extra private fields and invalid nested s
   assert.throws(()=>validateContract(value,"../admin"));
   const privateValue=structuredClone(value);privateValue.roster.observed_us=1;assert.throws(()=>validateContract(privateValue));
   const badStatus=structuredClone(value);badStatus.dataStatus.roster="secret";assert.throws(()=>validateContract(badStatus));
+  const oldRoster=structuredClone(value);oldRoster.roster.players=[{displayName:'Retired person'}];assert.throws(()=>validateContract(oldRoster));
+  const oldTimestamp=structuredClone(value);oldTimestamp.roster.lastSyncedAt='2026-11-19T10:00:00Z';assert.throws(()=>validateContract(oldTimestamp));
 });
